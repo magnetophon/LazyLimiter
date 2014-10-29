@@ -1,3 +1,17 @@
+/*
+ *  Copyright (C) 2014 Bart Brouns
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; version 2 of the License.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ */
+
+/*some building blocks where taken from or inspired on compressor-basics.dsp by Sampo Savolainen*/
+
 declare name      "LookAheadLimiter";
 declare author    "Bart Brouns";
 declare version   "0.1";
@@ -9,56 +23,56 @@ import ("music.lib");  //for linear2db
 //this implementation gives strange bugs:
       //THRESH(t,x) = (x-t) * (t < x);
 //this one is OK:
-THRESH(t,x) = (x-t): max(0);
+      //THRESH(t,x) = (x-t): max(0);
+//when used with:
+      //currentdown(x)      = 0-((currentLevel(x)):THRESH(threshold));
 currentLevel(x)     = ((abs(x)):linear2db);
-currentdown(x)      = 0-((currentLevel(x)):THRESH(threshold));
+currentdown(x)      = 0-(((currentLevel(x))-threshold):max(0));
 
 
-newLookaheadseq(x,lastdown) =
-  (stayDown*( 0:seq(i,maxPredelay, (currentdown(x)@(i):max(lastdown)),_: min ))),
-//(stayDown*( par(i,maxPredelay, (currentdown(x)@(i):max(lastdown)) ): seq(j,(log(maxPredelay)/log(2)),par(k,maxPredelay/(2:pow(j+1)),min)))),
+LookaheadSeq(x,lastdown) =
+(stayDown*( 0:seq(i,maxPredelay, (currentdown(x)@(i):max(lastdown)),_: min ))),
 (0: seq(i,pd, currentdown(x)@((i+1-pd+maxPredelay):max(0))*(((i+1)/pd):pow(limPunch)),_: min))
 :min;
 
 punchScale(x) = (x+1):pow(7); //from 0-1 to 1-128
 
-newLookahead(x,lastdown) = 
-stayDown*( par(i,maxPredelay, (currentdown(x)@(i):max(lastdown)) ): seq(j,(log(maxPredelay)/log(2)),par(k,maxPredelay/(2:pow(j+1)),min)))
-,
-      //(par(i,pd, currentdown(x)@((i+1))*(((i+1)))): seq(j,(log(pd)/log(2)),par(k,pd/(2:pow(j+1)),min)))/pd
-( par(i,pd, currentdown(x)@((i+1-pd+maxPredelay):max(0))*(((i+1)/pd):attackShaper)): seq(j,(log(pd)/log(2)),par(k,pd/(2:pow(j+1)),min)))
-:min
-with {
-    autoAttack = (lastdown/threshold):min(1):AAmeter;
-    attackShaper(x)= x:pow(limPunch);//atan((gainHS+0.0001)*128*x)/atan((gainHS+0.0001)*128);
-}
-;
-
-rateLimit(maxRateAttack,maxRateDecay,prevx,x) = (prevx+newtangent:min(0)),avgChange
+rateLimit(maxRateDecay,prevx,x) = (prevx+newtangent:min(0))
 //:max(maxGR:linear2db)
 with {
-    tangent       = x- prevx;
-    actualTangent  = prevx - prevx';
-    avgChange      = 0;//(abs((actualTangent-actualTangent')/DoubleMaxTangent):pow(IMpower):integrate(IM_size):pow(1/IMpower)*DoubleMaxTangent)*decayMult:_+1:pow(decayPower)-1:min(maxChange):max(0):(SMOOTH(attack, release) ~ _ ):mymeter;
-    /*avgChange      = (abs((actualTangent-actualTangent')/DoubleMaxTangent):pow(IMpower):integrate(IM_size):pow(1/IMpower)*DoubleMaxTangent)*decayMult:_+1:pow(decayPower)-1:min(maxChange):(SMOOTH(attack, release) ~ _ ):mymeter;*/
-    DoubleMaxTangent     = 1;//((abs(threshold)/maxPredelay)+(maxRateDecay/SR));
-    //avgChange      = abs((actualTangent)-(actualTangent@1)):pow(IMpower):integrate(IM_size):pow(1/IMpower)*decayMult:_+1:pow(decayPower)-1:mymeter;
-    newtangent     = select2(tangent>0,minus,plus):max(maxRateAttack*-1):min(maxRateDecay);
-    plus           = tangent*(((abs(avgChange)*-1):db2linear));
-    minus          = tangent;//*((abs(avgChange)*0.5):db2linear);
-	integrate(size,x) = (delaysum(size, x))/size;
-    delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;
+    tangent            = x- prevx;
+    newtangent         = select2(tangent>0,minus,plus):min(maxRateDecay);
+    plus               = tangent;//*(((abs(avgChange)*-1):db2linear));
+    minus              = tangent;//*((abs(avgChange)*0.5):db2linear);
+    /*actualTangent      = prevx - prevx';*/
+    /*avgChange          = (abs((actualTangent-actualTangent')/DoubleMaxTangent):pow(IMpower):integrate(IM_size):pow(1/IMpower)*DoubleMaxTangent)*decayMult:_+1:pow(decayPower)-1:min(maxChange):(SMOOTH(attack, release) ~ _ ):mymeter;*/
+    /*//avgChange        = abs((actualTangent)-(actualTangent@1)):pow(IMpower):integrate(IM_size):pow(1/IMpower)*decayMult:_+1:pow(decayPower)-1:mymeter;*/
+    /*DoubleMaxTangent   = 1;//((abs(threshold)/maxPredelay)+(maxRateDecay/SR));*/
+    /*integrate(size,x)  = (delaysum(size, x))/size;*/
+    /*delaysum(size)     = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
     };
 
-crossfade(x,a,b) = a*(1-x),b*x : +;
+linearXfade(x,a,b) = a*(1-x),b*x : +;
 
-rateLimiter = (_<: _,(rateLimit(MAX_flt,maxRateDecay) ~ _ ):crossfade(ratelimit),_);
+rateLimiter = (_<: _,(rateLimit(maxRateDecay) ~ _ ):linearXfade(ratelimit));
 
-      //limiter(x) = (newLookahead (x,0):rateLimiter):(_,!):db2linear:meter ,x@(maxPredelay):*;
-limiter(x) = (newLookaheadseq(x):rateLimiter)~(_,!):(_,!):db2linear:meter *x@(maxPredelay);
-
-
+      //limiter(x) = (LookaheadPar (x,0):rateLimiter):(_,!):db2linear:meter ,x@(maxPredelay):*;
+limiter(x) = (LookaheadSeq(x):rateLimiter)~_:db2linear:meter *x@(maxPredelay);
 
 
+
+
+
+/*LookaheadPar(x,lastdown) = */
+/*stayDown*( par(i,maxPredelay, (currentdown(x)@(i):max(lastdown)) ): seq(j,(log(maxPredelay)/log(2)),par(k,maxPredelay/(2:pow(j+1)),min)))*/
+/*,*/
+      /*//(par(i,pd, currentdown(x)@((i+1))*(((i+1)))): seq(j,(log(pd)/log(2)),par(k,pd/(2:pow(j+1)),min)))/pd*/
+/*( par(i,pd, currentdown(x)@((i+1-pd+maxPredelay):max(0))*(((i+1)/pd):attackShaper)): seq(j,(log(pd)/log(2)),par(k,pd/(2:pow(j+1)),min)))*/
+/*:min*/
+/*with {*/
+    /*autoAttack     = (lastdown/threshold):min(1):AAmeter;*/
+    /*attackShaper(x)= x:pow(limPunch);//atan((gainHS+0.0001)*128*x)/atan((gainHS+0.0001)*128);*/
+/*}*/
+/*;*/
 
 

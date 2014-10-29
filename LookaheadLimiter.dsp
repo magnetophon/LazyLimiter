@@ -1,3 +1,17 @@
+/*
+ *  Copyright (C) 2014 Bart Brouns
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; version 2 of the License.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ */
+
+/*some building blocks where taken from or inspired on compressor-basics.dsp by Sampo Savolainen*/
+
 declare name      "LookAheadLimiter";
 declare author    "Bart Brouns";
 declare version   "0.1";
@@ -7,13 +21,6 @@ import ("LookaheadLimiter.lib");
 
 pd = maxPredelay;
 
-MAX_flt = fconstant(int FLT_MAX, <float.h>);
-//FLT_MAX normal
-//DBL_MAX -double
-//LDBL_MAX -quad
-predelay = hslider("[0]predelay[tooltip: ]", maxPredelay , 1, maxPredelay , 1);
-//predelay = hslider("[0]predelay[tooltip: ]", 1, 0.0, 24, 0.001)*SR*0.001:int:max(1);
-//predelay = 0.5*SR;
 //maximumdown needs a power of 2 as a size
 //maxPredelay = 4; // = 0.1ms
 //maxPredelay = 128; // = 3ms
@@ -45,8 +52,8 @@ mtr = meter_group(_<:(_, ( (vbargraph("punch", 0, 128)))):attach);
 threshold     = detector_group(hslider("[4] Threshold [unit:dB]   [tooltip: When the signal level exceeds the Threshold (in dB), its level is compressed according to the Ratio]", -12, -60, 0, 0.1));
 
 limPunch      = shape_group(hslider("[1]punch[tooltip: ]", 0 , 0, 1 , 0.001)):punchScale:mtr;
-ratelimit      = ratelimit_group(hslider("[0]ratelimit amount[tooltip: ]", 0, 0, 1 , 0.001));
-maxRateDecay   = ratelimit_group(hslider("[2]max decay[unit:dB/s][tooltip: ]", 64, 6, 500 , 1)/SR);
-stayDown       = shape_group(hslider("[2]stayDown[tooltip: ]", 0.811, 0, 1 , 0.001));
+ratelimit      = ratelimit_group(hslider("[0]ratelimit amount[tooltip: ]", 1, 0, 1 , 0.001));
+maxRateDecay   = ratelimit_group(hslider("[2]max decay[unit:dB/s][tooltip: ]", 113, 6, 500 , 1)/SR);
+stayDown       = shape_group(hslider("[2]stayDown[tooltip: ]", 1, 0, 1 , 0.001));
 
 process = limiter ,limiter;
