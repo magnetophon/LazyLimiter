@@ -28,36 +28,78 @@ import ("music.lib");  //for linear2db
       //currentdown(x)      = 0-((currentLevel(x)):THRESH(threshold));
 currentLevel(x)     = ((abs(x)):linear2db);
 currentdown(x)      = 0-(((currentLevel(x))-threshold):max(0));
+      
+// smoothing function, attack coefficient "a", release coefficient "r" and signal x
+releaseEnv(r, x) = x:(env(r):rateLimiter)~_
+with {
+env (r, prevx, x)= select2( (x > prevx), x, (x*r)+(prevx * (1-r))     );
+};
 
+// smoothing function, attack coefficient "a", release coefficient "r" and signal x
+SMOOTH(a, r, prevx, x) = 
+	(x     *      select2( (x < prevx), a, r )) + 
+	(prevx * (1 - select2( (x < prevx), a, r)));
+
+
+limPowerScale(x) =((x>=0)*(1/(x+1)))+((x<0)* ((x*-1)+1));
 
 LookaheadSeq(x,lastdown) =
-(stayDown*( 0:seq(i,maxPredelay, (currentdown(x)@(i):max(lastdown)),_: min ))),
-(0: seq(i,pd, currentdown(x)@((i+1-pd+maxPredelay):max(0))*(((i+1)/pd):pow(limPunch)),_: min))
-:min;
+      // this one should be more efficient:
+      // ( 0:seq(i,maxPredelay,(currentdown(x)@(i):max(lastdown)),_: min )),
+      // yet this one is more efficient:
+      ( 0:seq(i,maxPredelay,(((i+1)>(maxPredelay-holdTime))*(currentdown(x)@(i):max(lastdown))),_: min )),
+(0: seq(i,maxAttackTime, currentdown(x)@((i+1-maxAttackTime+maxPredelay):max(0))*(((i+1)/maxAttackTime):attackShaper),_: min))
+:min
+with {
+           attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*6+.1))/tanh(attack*6+.1);
+      //attackShaper(x)= tanh(x:pow(attack:attackScale)*mult)/tanh(mult);
+      //attackShaper(x)= x:pow(attack:attackScale);
+           };
+      //tanh(x^(32)*20)/tanh(20)
+attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better
 
-punchScale(x) = (x+1):pow(7); //from 0-1 to 1-128
-
-rateLimit(maxRateDecay,prevx,x) = (prevx+newtangent:min(0))
+      //rateLimit(release,prevx,x) = (prevx+newtangent:min(0))
+rateLimit(release,prevx,x) = (prevx+(tangent:min(release)))
 //:max(maxGR:linear2db)
 with {
     tangent            = x- prevx;
-    newtangent         = select2(tangent>0,minus,plus):min(maxRateDecay);
-    plus               = tangent;//*(((abs(avgChange)*-1):db2linear));
+    newtangent         = select2(tangent>0,minus,plus):min(release);
+    plus               = tangent;//*(((abs(avgChange:mymeter )*-1):db2linear));
     minus              = tangent;//*((abs(avgChange)*0.5):db2linear);
-    /*actualTangent      = prevx - prevx';*/
-    /*avgChange          = (abs((actualTangent-actualTangent')/DoubleMaxTangent):pow(IMpower):integrate(IM_size):pow(1/IMpower)*DoubleMaxTangent)*decayMult:_+1:pow(decayPower)-1:min(maxChange):(SMOOTH(attack, release) ~ _ ):mymeter;*/
-    /*//avgChange        = abs((actualTangent)-(actualTangent@1)):pow(IMpower):integrate(IM_size):pow(1/IMpower)*decayMult:_+1:pow(decayPower)-1:mymeter;*/
-    /*DoubleMaxTangent   = 1;//((abs(threshold)/maxPredelay)+(maxRateDecay/SR));*/
-    /*integrate(size,x)  = (delaysum(size, x))/size;*/
-    /*delaysum(size)     = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
+    actualTangent      = prevx - prevx';
+      //:_+1:pow(decayPower)-1
+
+           avgChange          = (abs((actualTangent-actualTangent')):mean(rmsMaxSize))*decayMult:min(maxChange):(SMOOTH(IMattack, IMrelease) ~ _ );
+      //avgChange          = (abs((actualTangent-actualTangent')):integrate(rmsMaxSize))*decayMult:min(maxChange):(SMOOTH(IMattack, IMrelease) ~ _ );
+
+      //avgChange          = (abs((actualTangent-actualTangent')):pow(IMpower):integrate(IM_size):pow(1/IMpower))*decayMult:min(maxChange):(SMOOTH(IMattack, IMrelease) ~ _ );
+    //avgChange        = abs((actualTangent)-(actualTangent@1)):pow(IMpower):integrate(IM_size):pow(1/IMpower)*decayMult:_+1:pow(decayPower)-1:mymeter;
+    DoubleMaxTangent   = 1;//((abs(threshold)/maxPredelay)+(release/SR));
+      //integrate(size,x)  = (delaysum(size, x))/size;
+           delaysum(size)     = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;
+
+// the mean of n consecutive samples of a signal
+	// uses fixpoint to avoid the accumulation of
+	// rounding errors
+	mean(n) = float2fix : integrate(n) : fix2float : /(n);
+	
+	// the sliding sum of n consecutive samples of a signal
+	integrate(n,x) = x - x@n : +~_ ;
+	
+	// convertion between float and fix point
+	float2fix(x) = int(x*(1<<20));
+	fix2float(x) = float(x)/(1<<20);
     };
 
 linearXfade(x,a,b) = a*(1-x),b*x : +;
 
-rateLimiter = (_<: _,(rateLimit(maxRateDecay) ~ _ ):linearXfade(ratelimit));
+      //rateLimiter = (_<: _,(rateLimit(release) ~ _ ):linearXfade(ratelimit));
+      rateLimiter = (rateLimit(release) ~ _ );
+
 
       //limiter(x) = (LookaheadPar (x,0):rateLimiter):(_,!):db2linear:meter ,x@(maxPredelay):*;
-limiter(x) = (LookaheadSeq(x):rateLimiter)~_:db2linear:meter *x@(maxPredelay);
+limiter(x) = (LookaheadSeq(x):releaseEnv(logRelease))~_:meter:db2linear *x@(maxPredelay);
+      //limiter(x) = (LookaheadSeq(x):(_<:(releaseEnv(IMrelease),rateLimiter)):linearXfade(ratelimit))~_:meter:db2linear *x@(maxPredelay);
 
 
 
@@ -66,12 +108,12 @@ limiter(x) = (LookaheadSeq(x):rateLimiter)~_:db2linear:meter *x@(maxPredelay);
 /*LookaheadPar(x,lastdown) = */
 /*stayDown*( par(i,maxPredelay, (currentdown(x)@(i):max(lastdown)) ): seq(j,(log(maxPredelay)/log(2)),par(k,maxPredelay/(2:pow(j+1)),min)))*/
 /*,*/
-      /*//(par(i,pd, currentdown(x)@((i+1))*(((i+1)))): seq(j,(log(pd)/log(2)),par(k,pd/(2:pow(j+1)),min)))/pd*/
-/*( par(i,pd, currentdown(x)@((i+1-pd+maxPredelay):max(0))*(((i+1)/pd):attackShaper)): seq(j,(log(pd)/log(2)),par(k,pd/(2:pow(j+1)),min)))*/
+      /*//(par(i,maxAttackTime, currentdown(x)@((i+1))*(((i+1)))): seq(j,(log(maxAttackTime)/log(2)),par(k,maxAttackTime/(2:pow(j+1)),min)))/maxAttackTime*/
+/*( par(i,maxAttackTime, currentdown(x)@((i+1-maxAttackTime+maxPredelay):max(0))*(((i+1)/maxAttackTime):attackShaper)): seq(j,(log(maxAttackTime)/log(2)),par(k,maxAttackTime/(2:pow(j+1)),min)))*/
 /*:min*/
 /*with {*/
     /*autoAttack     = (lastdown/threshold):min(1):AAmeter;*/
-    /*attackShaper(x)= x:pow(limPunch);//atan((gainHS+0.0001)*128*x)/atan((gainHS+0.0001)*128);*/
+    /*attackShaper(x)= x:pow(attack:attackScale);//atan((gainHS+0.0001)*128*x)/atan((gainHS+0.0001)*128);*/
 /*}*/
 /*;*/
 
