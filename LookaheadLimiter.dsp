@@ -64,10 +64,10 @@ mtr      = meter_group(_<:(_, ( (vbargraph("punch", 0, 128)))):attach);
 mymeter  = meter_group(_<:(_, ( (vbargraph("[1][unit:dB][tooltip: input level in dB]", 0, 144)))):attach);
 
 threshold   = knob_group(hslider("[0]threshold [unit:dB]   [tooltip: maximum output level]", -12, -60, 0, 0.1));
-attack      = knob_group(hslider("[1]attack[tooltip: attack speed]", 0 , 0, 1 , 0.001));
+attack      = knob_group(hslider("[1]attack[tooltip: attack speed]", 1 , 0, 1 , 0.001));
 holdTime    = knob_group(hslider("[2]hold[tooltip: maximum hold time]", maxPredelay, 0, maxPredelay , 1));
 release     = knob_group(hslider("[3]linrelease[unit:dB/s][tooltip: maximum release rate]", 113, 6, 500 , 1)/SR);
-logRelease  = knob_group(time_ratio_release(hslider("[4]log release [unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",0.1, 0.1, 1000, 0.1)/1000));
+logRelease  = knob_group(time_ratio_release(hslider("[4]log release [unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",66, 0.1, 1000, 0.1)/1000));
 
 ratelimit  = knob_group(hslider("[0]ratelimit amount[tooltip: ]", 1, 0, 1 , 0.001));
 
