@@ -20,16 +20,17 @@ declare copyright "(C) 2014 Bart Brouns";
 import ("LookaheadLimiter.lib");
 
 //LookaheadSeq/LookaheadPar need a power of 2 as a size
+//the following bug-comments only manifest with another implementation of "currentdown"
 //maxPredelay = 4; // = 0.1ms
 //maxPredelay = 128; // = 3ms
 //maxPredelay = 256; // = 6ms   //no overs till here, independent of -vec compile option
 //maxPredelay = 512; // = 12ms //no overs till here, but only without -vec or with both  -vec and -lv 1
-//maxPredelay = 1024; // = 23ms //always gives overs with par lookahead, never gives overs with seq lookahead. Unfortunately, seq @ 1024 doesn't like ratelimiter: as soon as it is faded in, we get silence.
+maxPredelay = 1024; // = 23ms //always gives overs with par lookahead, never gives overs with seq lookahead. Unfortunately, seq @ 1024 doesn't like ratelimiter: as soon as it is faded in, we get silence.
 // seq @ < 1024 works fine...
-maxPredelay = 2048; // = 46ms
+//maxPredelay = 2048; // = 46ms
 //maxPredelay = 8192; // = 186ms
 
-maxAttackTime = 1024:min(maxPredelay);
+maxAttackTime = 512;//:min(maxPredelay);
 
 rmsMaxSize = 4096;
 
@@ -67,9 +68,11 @@ threshold   = knob_group(hslider("[0]threshold [unit:dB]   [tooltip: maximum out
 attack      = knob_group(hslider("[1]attack[tooltip: attack speed]", 1 , 0, 1 , 0.001));
 holdTime    = knob_group(hslider("[2]hold[tooltip: maximum hold time]", maxPredelay, 0, maxPredelay , 1));
 release     = knob_group(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 113, 6, 500 , 1)/SR);
-logRelease  = knob_group(time_ratio_release(hslider("[4]log release [unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",66, 0.1, 1000, 0.1)/1000));
+logRelease  = knob_group(time_ratio_release(hslider("[4]log release [unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",50, 0.1, 1000, 0.1)/1000));
+link  = knob_group(hslider("[4]stereo link[tooltip: ]", 1, 0, 1 , 0.001));
 
 ratelimit  = knob_group(hslider("[0]ratelimit amount[tooltip: ]", 1, 0, 1 , 0.001));
+
 
 mult           = ratelimit_group(hslider("[3]mult[tooltip: ]", 1 , 0.1,20, 0.1));
 
@@ -83,6 +86,7 @@ decayMult      = ratelimit_group(hslider("[3]decayMult[tooltip: ]", 200 , 0,500,
 
 IMpower        = ratelimit_group(hslider("[1]IMpower[tooltip: ]", -64 , -128, 0 , 0.001)):limPowerScale;
 IM_size        = ratelimit_group(hslider("[5]IM_size[tooltip: ]",108, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
-//process = releaseEnv;
-process = limiter ,limiter;
+process = stereoLimiter;
+//process = stereoGainComputer;
+//process = limiter ,limiter;
 

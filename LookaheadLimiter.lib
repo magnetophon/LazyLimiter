@@ -30,7 +30,8 @@ currentLevel(x)     = ((abs(x)):linear2db);
 currentdown(x)      = 0-(((currentLevel(x))-threshold):max(0));
       
 // smoothing function, attack coefficient "a", release coefficient "r" and signal x
-releaseEnv(r, x) = x:(env(r):rateLimiter)~_
+      //releaseEnv(r, x) = x:(env(r):rateLimiter)~_
+releaseEnv(r, x) = x:(env(r))~_
 with {
 env (r, prevx, x)= select2( (x > prevx), x, (x*r)+(prevx * (1-r))     );
 };
@@ -51,7 +52,7 @@ LookaheadSeq(x,lastdown) =
 (0: seq(i,maxAttackTime, currentdown(x)@((i+1-maxAttackTime+maxPredelay):max(0))*(((i+1)/maxAttackTime):attackShaper),_: min))
 :min
 with {
-           attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*6+.1))/tanh(attack*6+.1);
+           attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*8+.1))/tanh(attack*8+.1);
       //attackShaper(x)= tanh(x:pow(attack:attackScale)*mult)/tanh(mult);
       //attackShaper(x)= x:pow(attack:attackScale);
            };
@@ -101,14 +102,25 @@ linearXfade(x,a,b) = a*(1-x),b*x : +;
 limiter(x) = (LookaheadSeq(x):releaseEnv(logRelease))~_:meter:db2linear *x@(maxPredelay);
       //limiter(x) = (LookaheadSeq(x):(_<:(releaseEnv(IMrelease),rateLimiter)):linearXfade(ratelimit))~_:meter:db2linear *x@(maxPredelay);
 
+gainComputer(x) = (LookaheadSeq(x):releaseEnv(logRelease))~_;
 
+stereoGainComputerHalf (x,y,prevy) = ((((LookaheadSeq(x),(LookaheadSeq(x),(prevy:LookaheadSeq(y)):min)):linearXfade(link)):releaseEnv(logRelease))~(_<:_,_));
+
+stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~(_,_ <: !,_,_,!);
 
 
 
 /*LookaheadPar(x,lastdown) = */
-/*stayDown*( par(i,maxPredelay, (currentdown(x)@(i):max(lastdown)) ): seq(j,(log(maxPredelay)/log(2)),par(k,maxPredelay/(2:pow(j+1)),min)))*/
-/*,*/
-      /*//(par(i,maxAttackTime, currentdown(x)@((i+1))*(((i+1)))): seq(j,(log(maxAttackTime)/log(2)),par(k,maxAttackTime/(2:pow(j+1)),min)))/maxAttackTime*/
+stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((_:meter:db2linear)*x@(maxPredelay),((_:meter:db2linear)*y@(maxPredelay))));
+           
+/*(*/
+/*(((((LookaheadSeq(x),(LookaheadSeq(x),LookaheadSeq(y):min)):linearXfade(link)):releaseEnv(logRelease))~(_<:_,_))~_),*/
+/*(((((LookaheadSeq(y),(LookaheadSeq(y),LookaheadSeq(x):min)):linearXfade(link)):releaseEnv(logRelease))~(_<:_,_))~_));*/
+
+
+      //(((((LookaheadSeq(x),(LookaheadSeq(x),LookaheadSeq(y):min)):linearXfade(link)):releaseEnv(logRelease))~(_<:_,_))~_:meter:db2linear*x@(maxPredelay)),
+      //(((((LookaheadSeq(y),(LookaheadSeq(y),LookaheadSeq(x):min)):linearXfade(link)):releaseEnv(logRelease))~(_<:_,_))~_:meter:db2linear*y@(maxPredelay)));
+
 /*( par(i,maxAttackTime, currentdown(x)@((i+1-maxAttackTime+maxPredelay):max(0))*(((i+1)/maxAttackTime):attackShaper)): seq(j,(log(maxAttackTime)/log(2)),par(k,maxAttackTime/(2:pow(j+1)),min)))*/
 /*:min*/
 /*with {*/
