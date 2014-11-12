@@ -19,31 +19,29 @@ declare copyright "(C) 2014 Bart Brouns";
 
 import ("LookaheadLimiter.lib");
 
-//LookaheadSeq/LookaheadPar need a power of 2 as a size
-//the following bug-comments only manifest with another implementation of "currentdown"
-//maxPredelay = 4; // = 0.1ms
-//maxPredelay = 128; // = 3ms
-//maxPredelay = 256; // = 6ms   //no overs till here, independent of -vec compile option
-//maxPredelay = 512; // = 12ms //no overs till here, but only without -vec or with both  -vec and -lv 1
-maxPredelay = 1024; // = 23ms //always gives overs with par lookahead, never gives overs with seq lookahead. Unfortunately, seq @ 1024 doesn't like ratelimiter: as soon as it is faded in, we get silence.
+//LookaheadPar needs a power of 2 as a size
+//the following maxHoldTime related bug-comments only manifest with another implementation of "currentdown"
+//maxHoldTime = 4; // = 0.1ms
+//maxHoldTime = 128; // = 3ms
+//maxHoldTime = 256; // = 6ms   //no overs till here, independent of -vec compile option
+//maxHoldTime = 512; // = 12ms //no overs till here, but only without -vec or with both  -vec and -lv 1
+maxHoldTime = 1024; // = 23ms //always gives overs with par lookahead, never gives overs with seq lookahead. Unfortunately, seq @ 1024 doesn't like ratelimiter: as soon as it is faded in, we get silence.
 // seq @ < 1024 works fine...
-//maxPredelay = 2048; // = 46ms
-//maxPredelay = 8192; // = 186ms
+//maxHoldTime = 2048; // = 46ms
+//maxHoldTime = 8192; // = 186ms
 
-maxAttackTime = 512;//:min(maxPredelay);
+//with maxHoldTime = 1024, having maxAttackTime = 512 uses more cpu then maxAttackTime = 1024
+maxAttackTime = 1024:min(maxHoldTime);
 
 rmsMaxSize = 4096;
 
 time_ratio_target = 1.5; 
 
 //time_ratio_target_atk = hslider("attack time ratio", 1.5, 0.2, 10.0, 0.1); 
-//time_ratio_target_rel = hslider("release time ratio", 1.5, 0.2, 5.0, 0.1);
 time_ratio_target_atk = 8.0;
 //time_ratio_target_rel = 4.0; // this could be too slow
-time_ratio_target_rel = 1.5;
+//time_ratio_target_rel = 1.5;
 
-time_ratio_attack(t) = exp(1) / ( t * SR * time_ratio_target_atk );
-time_ratio_release(t) = exp(1) / ( t * SR * time_ratio_target_rel );
 
 main_group(x)  = (hgroup("[1]", x));
 
@@ -65,11 +63,14 @@ mtr      = meter_group(_<:(_, ( (vbargraph("punch", 0, 128)))):attach);
 mymeter  = meter_group(_<:(_, ( (vbargraph("[1][unit:dB][tooltip: input level in dB]", 0, 144)))):attach);
 
 threshold   = knob_group(hslider("[0]threshold [unit:dB]   [tooltip: maximum output level]", -12, -60, 0, 0.1));
-attack      = knob_group(hslider("[1]attack[tooltip: attack speed]", 1 , 0, 1 , 0.001));
-holdTime    = knob_group(hslider("[2]hold[tooltip: maximum hold time]", maxPredelay, 0, maxPredelay , 1));
+attack      = knob_group(hslider("[1]attack shape[tooltip: attack speed]", 0.841 , 0, 1 , 0.001));
+//hardcoding holdTime to maxHoldTime uses more cpu then having a fader!
+holdTime    = knob_group(hslider("[2]hold time[tooltip: maximum hold time]", maxHoldTime, 0, maxHoldTime , 1));
 release     = knob_group(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 113, 6, 500 , 1)/SR);
-logRelease  = knob_group(time_ratio_release(hslider("[4]log release [unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",50, 0.1, 1000, 0.1)/1000));
-link  = knob_group(hslider("[4]stereo link[tooltip: ]", 1, 0, 1 , 0.001));
+logRelease  = knob_group(hslider("[4]release time[unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",150, 0.1, 500, 0.1)/1000):time_ratio_release;
+time_ratio_target_rel =  knob_group(hslider("[5]release shape", 0.5, 0.2, 5.0, 0.1));
+// hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
+link  = knob_group(hslider("[6]stereo link[tooltip: ]", 1, 0, 1 , 0.001));
 
 ratelimit  = knob_group(hslider("[0]ratelimit amount[tooltip: ]", 1, 0, 1 , 0.001));
 
@@ -86,7 +87,9 @@ decayMult      = ratelimit_group(hslider("[3]decayMult[tooltip: ]", 200 , 0,500,
 
 IMpower        = ratelimit_group(hslider("[1]IMpower[tooltip: ]", -64 , -128, 0 , 0.001)):limPowerScale;
 IM_size        = ratelimit_group(hslider("[5]IM_size[tooltip: ]",108, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
-process = stereoLimiter;
-//process = stereoGainComputer;
+
 //process = limiter ,limiter;
+process = naiveStereoLimiter;
+//process = simpleStereoLimiter;
+//process = stereoLimiter;
 
