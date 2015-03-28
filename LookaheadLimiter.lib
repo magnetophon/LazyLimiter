@@ -19,6 +19,7 @@ declare copyright "(C) 2014 Bart Brouns";
 
 import ("music.lib");  //for linear2db
 
+//todo: mid-side, auto-release
 
 currentLevel(x)     = ((abs(x)):linear2db);
 //this implementation gives strange bugs:
@@ -32,25 +33,31 @@ SMOOTH(a, r, prevx, x) =
 	(prevx * (1 - select2( (x < prevx), a, r)));
 
 // smoothing function, 0 attack, release coefficient "r" and signal x
-//releaseEnv(r, x) = x:(env(r):rateLimiter)~_
 releaseEnv(r, x) = x:(env(r))~_
 with {
     env (r, prevx, x)= select2( (x > prevx), x, (x*r)+(prevx * (1-r))     );
 };
 
-time_ratio_attack(t) = exp(1) / ( t * SR * time_ratio_target_atk );
 time_ratio_release(t) = exp(1) / ( t * SR * time_ratio_target_rel );
 
 limPowerScale(x) =((x>=0)*(1/(x+1)))+((x<0)* ((x*-1)+1));
 
-LookaheadSeq(x,lastdown) =
-// this one should be more efficient:
-// ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min )),
-// yet this one is more efficient:
-(0:seq(i,maxHoldTime,(((i+1)>(maxHoldTime-holdTime))*(currentdown(x)@(i):max(lastdown))),_: min )),
-(0: seq(i,maxAttackTime, currentdown(x)@((i+1-maxAttackTime+maxHoldTime):max(0))*(((i+1)/maxAttackTime):attackShaper),_: min))
+Lookahead(x,lastdown) =
+variable_hold,
+attackGR
 :min
 with {
+    // this one should be more efficient: fixed hold time
+    fixed_hold = ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min ));
+    // yet this one is more efficient: variable hold time
+    variable_hold =
+      0:seq(i,maxHoldTime,
+       (((i+1)>(maxHoldTime-holdTime))*(currentdown(x)@(i):max(lastdown))),_: min 
+      );
+    attackGR =
+       0: seq(i,maxAttackTime,
+         currentdown(x)@((i+1-maxAttackTime+maxHoldTime):max(0))*(((i+1)/maxAttackTime):attackShaper),_: min
+       );
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
     //attackShaper(x)= tanh(x:pow(attack:attackScale)*mult)/tanh(mult);
     //attackShaper(x)= x:pow(attack:attackScale);
@@ -69,54 +76,17 @@ with {
 }
 ;
 
-
-//rateLimit(release,prevx,x) = (prevx+newtangent:min(0))
-rateLimit(release,prevx,x) = (prevx+(tangent:min(release)))
-//:max(maxGR:linear2db)
-with {
-    tangent            = x- prevx;
-    newtangent         = select2(tangent>0,minus,plus):min(release);
-    plus               = tangent;//*(((abs(avgChange:mymeter )*-1):db2linear));
-    minus              = tangent;//*((abs(avgChange)*0.5):db2linear);
-    actualTangent      = prevx - prevx';
-      //:_+1:pow(decayPower)-1
-
-           avgChange          = (abs((actualTangent-actualTangent')):mean(rmsMaxSize))*decayMult:min(maxChange):(SMOOTH(IMattack, IMrelease) ~ _ );
-      //avgChange          = (abs((actualTangent-actualTangent')):integrate(rmsMaxSize))*decayMult:min(maxChange):(SMOOTH(IMattack, IMrelease) ~ _ );
-
-      //avgChange          = (abs((actualTangent-actualTangent')):pow(IMpower):integrate(IM_size):pow(1/IMpower))*decayMult:min(maxChange):(SMOOTH(IMattack, IMrelease) ~ _ );
-    //avgChange        = abs((actualTangent)-(actualTangent@1)):pow(IMpower):integrate(IM_size):pow(1/IMpower)*decayMult:_+1:pow(decayPower)-1:mymeter;
-    DoubleMaxTangent   = 1;//((abs(threshold)/maxHoldTime)+(release/SR));
-      //integrate(size,x)  = (delaysum(size, x))/size;
-           delaysum(size)     = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;
-
-// the mean of n consecutive samples of a signal
-	// uses fixpoint to avoid the accumulation of
-	// rounding errors
-	mean(n) = float2fix : integrate(n) : fix2float : /(n);
-	
-	// the sliding sum of n consecutive samples of a signal
-	integrate(n,x) = x - x@n : +~_ ;
-	
-	// convertion between float and fix point
-	float2fix(x) = int(x*(1<<20));
-	fix2float(x) = float(x)/(1<<20);
-    };
-
 linearXfade(x,a,b) = a*(1-x),b*x : +;
 
-//rateLimiter = (_<: _,(rateLimit(release) ~ _ ):linearXfade(ratelimit));
-rateLimiter = (rateLimit(release) ~ _ );
+limiter(x) = (Lookahead(x):releaseEnv(logRelease))~_:meter:db2linear *x@maxHoldTime;
 
+gainComputer(x) = (Lookahead(x):releaseEnv(logRelease))~_;
 
-//limiter(x) = (LookaheadPar (x,0):releaseEnv(logRelease)):(_,!):meter:db2linear ,x@maxHoldTime:*;
-
-
-limiter(x) = (LookaheadSeq(x):releaseEnv(logRelease))~_:meter:db2linear *x@maxHoldTime;
-
-gainComputer(x) = (LookaheadSeq(x):releaseEnv(logRelease))~_;
-
-stereoGainComputerHalf (x,y,prevy) = ((((LookaheadSeq(x),(LookaheadSeq(x),(prevy:LookaheadSeq(y)):min)):linearXfade(link)):releaseEnv(logRelease))~(_<:_,_));
+stereoGainComputerHalf (x,y,prevy) =
+  (
+    (((_,(_,(prevy:Lookahead(y)):min)):linearXfade(link)):releaseEnv(logRelease))
+    ~(Lookahead(x)<:_,_)
+  );
 
 stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~(_,_ <: !,_,_,!);
 
@@ -131,7 +101,7 @@ stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((_:meter:db2linear)*x@maxHoldT
 //faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LookaheadLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
 //jack: 80% CPU
-simpleStereoLimiter(x,y) = (((LookaheadSeq(x):releaseEnv(logRelease)),(LookaheadSeq(y):releaseEnv(logRelease))):min)~(_<:(_,_)):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(logRelease)),(Lookahead(y):releaseEnv(logRelease))):min)~(_<:(_,_)):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 
 //simpleStereoLimiter(x,y) = (LookaheadPar(x),LookaheadPar(y):min:releaseEnv(logRelease))~(_<:(_,_)):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 

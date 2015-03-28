@@ -22,10 +22,10 @@ import ("LookaheadLimiter.lib");
 //LookaheadPar needs a power of 2 as a size
 //the following maxHoldTime related bug-comments only manifest with another implementation of "currentdown"
 //maxHoldTime = 4; // = 0.1ms
-//maxHoldTime = 128; // = 3ms
+maxHoldTime = 128; // = 3ms
 //maxHoldTime = 256; // = 6ms   //no overs till here, independent of -vec compile option
 //maxHoldTime = 512; // = 12ms //no overs till here, but only without -vec or with both  -vec and -lv 1
-maxHoldTime = 1024; // = 23ms //always gives overs with par lookahead, never gives overs with seq lookahead. Unfortunately, seq @ 1024 doesn't like ratelimiter: as soon as it is faded in, we get silence.
+//maxHoldTime = 1024; // = 23ms //always gives overs with par lookahead, never gives overs with seq lookahead. Unfortunately, seq @ 1024 doesn't like ratelimiter: as soon as it is faded in, we get silence.
 // seq @ < 1024 works fine...
 //maxHoldTime = 2048; // = 46ms
 //maxHoldTime = 8192; // = 186ms
@@ -81,7 +81,7 @@ mult           = ratelimit_group(hslider("[3]mult[tooltip: ]", 1 , 0.1,20, 0.1))
 IMattack        = ratelimit_group(time_ratio_attack(hslider("[6] Attack [unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new lower target level (the compression `kicking in')]", 23.7, 0.1, 500, 0.1)/1000)) ;
 IMrelease       = ratelimit_group(time_ratio_release(hslider("[7] Release [unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",0.1, 0.1, 2000, 0.1)/1000));
 
-maxChange = hslider("[0]maxChange[tooltip: ]", 84 , 1, 144 , 1);
+maxChange      = hslider("[0]maxChange[tooltip: ]", 84 , 1, 144 , 1);
 decayPower     = ratelimit_group(hslider("[4]decayPower[tooltip: ]", 10, 0, 10 , 0.001));
 decayMult      = ratelimit_group(hslider("[3]decayMult[tooltip: ]", 200 , 0,500, 1))*10;
 
@@ -89,7 +89,7 @@ IMpower        = ratelimit_group(hslider("[1]IMpower[tooltip: ]", -64 , -128, 0 
 IM_size        = ratelimit_group(hslider("[5]IM_size[tooltip: ]",108, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
 
 //process = limiter ,limiter;
-process = naiveStereoLimiter;
+//process = naiveStereoLimiter;
 //process = simpleStereoLimiter;
-//process = stereoLimiter;
-
+process = stereoLimiter;
+//process = rateLimiter;
