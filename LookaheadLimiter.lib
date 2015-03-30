@@ -22,15 +22,7 @@ import ("music.lib");  //for linear2db
 //todo: mid-side, auto-release
 
 currentLevel(x)     = ((abs(x)):linear2db);
-//this implementation gives strange bugs:
-//currentdown(x)      = 0-(((currentLevel(x))-threshold)*(threshold<currentLevel(x)));
-//this one is OK:
 currentdown(x)      = 0-(((currentLevel(x))-threshold):max(0));
-
-// smoothing function, attack coefficient "a", release coefficient "r" and signal x
-SMOOTH(a, r, prevx, x) = 
-	(x     *      select2( (x < prevx), a, r )) + 
-	(prevx * (1 - select2( (x < prevx), a, r)));
 
 // smoothing function, 0 attack, release coefficient "r" and signal x
 releaseEnv(r, x) = x:(env(r))~_
@@ -39,8 +31,6 @@ with {
 };
 
 time_ratio_release(t) = exp(1) / ( t * SR * time_ratio_target_rel );
-
-limPowerScale(x) =((x>=0)*(1/(x+1)))+((x<0)* ((x*-1)+1));
 
 Lookahead(x,lastdown) =
 variable_hold,
@@ -71,16 +61,36 @@ LookaheadPar(x,lastdown) =
 :min
 with {
     //attackShaper(x)= x:pow(attack:attackScale);//atan((gainHS+0.0001)*128*x)/atan((gainHS+0.0001)*128);
-    attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*8+.1))/tanh(attack*8+.1);
+    attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
     attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better
 }
 ;
+rmsMaxSize =4;
+//rmsMaxSize =1024;
+rateLimiter(maxRateDecay,prevx,x) = prevx+newtangent:min(0)
+with {
+    tangent     = x- prevx;
+    avgChange   = abs((tangent@1)-(tangent@2)):integrate(IM_size)*decayMult:_+1:pow(decayPower)-1;
+    newtangent  = select2(tangent>0,minus,plus):min(maxRateDecay);
+    plus        = tangent*((abs(avgChange)*-1):db2linear);
+    minus       = tangent;//*((abs(avgChange)*0.5):db2linear);
+       //select2(abs(tangent)>maxRate,tangent,maxRate);
+	integrate(size,x) = delaysum(size, x)/size;
+    delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;
+    };
+
+rateLimit = ( rateLimiter(maxRateDecay) ~ _ );
+maxRateDecay   = (hslider("[2]max decay[unit:dB/s][tooltip: ]", 3813, 6, 8000 , 1)/SR);
+decayMult      = (hslider("[3]decayMult[tooltip: ]", 20000 , 0,20000 , 0.001)/100);
+decayPower     = (hslider("[4]decayPower[tooltip: ]", 50, 0, 50 , 0.001));
+IM_size        = (hslider("[5]IM_size[tooltip: ]",108, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
 
 linearXfade(x,a,b) = a*(1-x),b*x : +;
 
 limiter(x) = (Lookahead(x):releaseEnv(logRelease))~_:meter:db2linear *x@maxHoldTime;
 
-gainComputer(x) = (Lookahead(x):releaseEnv(logRelease))~_;
+gainComputer(x) = (Lookahead(x)<:(rateLimit,releaseEnv(logRelease)):linearXfade(link))~_;
+//gainComputer(x) = (Lookahead(x):releaseEnv(logRelease))~_;
 
 stereoGainComputerHalf (x,y,prevy) =
   (
