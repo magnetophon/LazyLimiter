@@ -19,18 +19,20 @@ declare copyright "(C) 2014 Bart Brouns";
 
 import ("LookaheadLimiter.lib");
 
-//LookaheadPar needs a power of 2 as a size
-//the following maxHoldTime related bug-comments only manifest with another implementation of "currentdown"
-maxHoldTime = 4; // = 0.1ms
+//Lookahead and LookaheadPar need a power of 2 as a size
+//maxHoldTime = 4; // = 0.1ms, for looking at the block diagram
 //maxHoldTime = 128; // = 3ms
 //maxHoldTime = 256; // = 6ms
-//maxHoldTime = 512; // = 12ms
-//maxHoldTime = 1024; // = 23ms
-//maxHoldTime = 2048; // = 46ms
+//maxHoldTime = 512; // = 12ms, starts to sound OK
+//maxHoldTime = 1024; // = 23ms, good sound, 185% CPU
+maxHoldTime = 2048; // = 46ms, great sound, 300% CPU
 //maxHoldTime = 8192; // = 186ms
 
 //with maxHoldTime = 1024, having maxAttackTime = 512 uses more cpu then maxAttackTime = 1024
 maxAttackTime = 1024:min(maxHoldTime);
+
+//rmsMaxSize = 1024:min(maxHoldTime);
+rmsMaxSize = 256:min(maxHoldTime);
 
 main_group(x)  = (hgroup("[1]", x));
 
@@ -48,9 +50,11 @@ time_ratio_target_rel =  knob_group(hslider("[5]release shape", 0.5, 0.2, 5.0, 0
 link  = knob_group(hslider("[6]stereo link[tooltip: ]", 1, 0, 1 , 0.001));
 
 
-meter    = meter_group(_<:(_, ( (vbargraph("[1]GR[unit:dB][tooltip: gain reduction in dB]", -60, 0)))):attach);
+meter    = meter_group(_<:(_, ( (vbargraph("[0]GR[unit:dB][tooltip: gain reduction in dB]", -60, 0)))):attach);
+mymeter    = meter_group(_<:(_, ( (vbargraph("[1]GR[unit:dB][tooltip: gain reduction in dB]", 0, 210)))):attach);
 //process = limiter ,limiter;
 process = naiveStereoLimiter;
 //process = simpleStereoLimiter;
 //process = stereoLimiter;
 //process = rateLimiter;
+//process = SMOOTH(3,4);
