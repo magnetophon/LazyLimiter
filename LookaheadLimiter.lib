@@ -72,35 +72,70 @@ SMOOTH(a, r,  x) =
 	(_ * (1 - select2( (x < _), a, r)))) ~ (_<:_,_,_);
 
 
+/*rateLimiter(maxRateDecay,prevx,x) = prevx+newtangent:min(0)*/
+/*with {*/
+    /*newtangent  = select2(tangent>0,minus,plus);*/
+    /*tangent     = x- prevx;*/
+    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(maxRateDecay);*/
+    /*minus       = tangent;// if you have to go down, you have to go down!*/
+    /*avgChange   = (abs((tangent)-(tangent@1)):integrate(IM_size)*decayMult:_+1:pow(decayPower)-1)/200:SMOOTH(attackRel,0.0008):tanh*changeScale;*/
+       /*//select2(abs(tangent)>maxRate,tangent,maxRate);*/
+    /*integrate(size,x) = delaysum(size, x)/size;*/
+    /*delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
+    /*};*/
+
 rateLimiter(maxRateDecay,prevx,x) = prevx+newtangent:min(0)
 with {
-    tangent     = x- prevx;
-    avgChange   = (abs((tangent)-(tangent@1)):integrate(IM_size)*decayMult:_+1:pow(decayPower)-1)/200:SMOOTH(attackRel,0.0008):tanh*changeScale;
     newtangent  = select2(tangent>0,minus,plus);
-    plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(maxRateDecay);
+    tangent     = x- prevx;
+    plus        = (tangent*(abs(speed):mymeter));
+//:min(maxRateDecay)
     minus       = tangent;// if you have to go down, you have to go down!
+    speed       = select2(prevx<avgLevel,aboveAvg,belowAvg);
+    avgLevel    = prevx:SMOOTH(attackRel,decayRel):avgMeter;
+    belowAvg    = ((abs(x - avgLevel ) )*decayMult:_+1:pow(decayPower)-1)/200:tanh:pow(belowSpeed);
+    aboveAvg    = aboveSpeed;
+    //avgChange   = (abs(x-(integrate(IM_size,prevx):SMOOTH(attackRel,decayRel)))*decayMult:_+1:pow(decayPower)-1)/200:tanh*changeScale;
        //select2(abs(tangent)>maxRate,tangent,maxRate);
-	integrate(size,x) = delaysum(size, x)/size;
+    integrate(size,x) = delaysum(size, x)/size;
     delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;
     };
+
+/*rateLimiter(maxRateDecay,prevx,x) = prevx+newtangent:min(0)*/
+/*with {*/
+    /*newtangent  = select2(tangent>0,minus,plus);*/
+    /*tangent     = x- prevx;*/
+    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(maxRateDecay);*/
+    /*minus       = tangent;// if you have to go down, you have to go down!*/
+    /*avgChange   = (tangent:nrSignChange(IM_size)*decayMult+1:pow(decayPower)-1)/200:SMOOTH(attackRel,0.0008):tanh*changeScale;*/
+       /*//select2(abs(tangent)>maxRate,tangent,maxRate);*/
+    /*nrSignChange(size)  = _ <: par(i,rmsMaxSize, signChange(i,size)) :> _/size;*/
+    /*//signChange(i,x) = ( ((x@(i)>0) && (x@(i+1)<0)));*/
+    /*signChange(i,size,x) = ( ((x@(i):max(0)) * (x@(i+1)<=0)) + ((x@(i):min(0)*-1) * (x@(i+1)>0)) ) * (i<size);*/
+	/*integrate(size,x) = delaysum(size, x)/size;*/
+    /*delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
+    /*};*/
 
 time_ratio_target_atk = 8.0;
 time_ratio_attack(t) = exp(1) / ( t * SR * time_ratio_target_atk );
 
 rateLimit = ( rateLimiter(maxRateDecay) ~ _ );
 
-maxRateDecay   = (hslider("[2]max decay[unit:dB/s][tooltip: ]", 1000, 6, 2000 , 1)/SR);
-decayMult      = (hslider("[3]decayMult[tooltip: ]", 10000 , 0,20000 , 0.001)*10);
-decayPower     = (hslider("[4]decayPower[tooltip: ]", 1.666, 0, 10 , 0.001));
+maxRateDecay   = (hslider("[2]max decay[unit:dB/s][tooltip: ]", 96, 6, 500 , 1)/SR);
+decayMult      = (hslider("[3]decayMult[tooltip: ]", 0,2 , 0, 10 , 0.001)*100);
+decayPower     = (hslider("[4]decayPower[tooltip: ]", 2, 0, 5 , 0.001));
 IM_size        = (hslider("[5]IM_size[tooltip: ]",256, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
-changeScale    = hslider("[6]changeScale[tooltip: ]", 57, 0, 400,   0.001);
-attackRel      = (time_ratio_attack(hslider("[7] Attack [unit:ms]   [tooltip:  ]", 46, 0.1, 500, 0.1)/1000)) ;
+belowSpeed     = hslider("[6]belowSpeed[tooltip: ]", 20, 1, 20,   0.001);
+aboveSpeed     = hslider("[7]aboveSpeed[tooltip: ]", 0.1, 0, 1,   0.001)*0.001;
+attackRel      = (time_ratio_attack(hslider("[8] Attack [unit:ms]   [tooltip:  ]", 2.5, 0.001, 300, 0.001)/1000)) ;
+decayRel       = (time_ratio_attack(hslider("[9] Decay [unit:ms]   [tooltip:  ]", 500, 0.001, 500, 0.001)/1000)) ;
 
 linearXfade(x,a,b) = a*(1-x),b*x : +;
 
 limiter(x) = (Lookahead(x):releaseEnv(logRelease))~_:meter:db2linear *x@maxHoldTime;
 
-gainComputer(x) = (Lookahead(x)<:(releaseEnv(logRelease),rateLimit):linearXfade(link))~_;
+gainComputer(x) = (Lookahead(x):releaseEnv(logRelease))~_<:(_,rateLimit):linearXfade(link);
+//gainComputer(x) = (Lookahead(x)<:(releaseEnv(logRelease),rateLimit):linearXfade(link))~_;
 //gainComputer(x) = (Lookahead(x):releaseEnv(logRelease))~_;
 
 stereoGainComputerHalf (x,y,prevy) =
