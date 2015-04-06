@@ -46,8 +46,8 @@ with {
       );
     attackGR =
        0: seq(i,maxAttackTime,
-         currentdown(x)@((i+1-maxAttackTime+maxHoldTime):max(0))*(((i+1)/maxAttackTime):attackShaper),_: min
-       );
+         (currentdown(x)@((i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
+       )-lastdown;
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
     //attackShaper(x)= tanh(x:pow(attack:attackScale)*mult)/tanh(mult);
     //attackShaper(x)= x:pow(attack:attackScale);
@@ -72,11 +72,11 @@ SMOOTH(a, r,  x) =
 	(_ * (1 - select2( (x < _), a, r)))) ~ (_<:_,_,_);
 
 
-/*rateLimiter(maxRateDecay,prevx,x) = prevx+newtangent:min(0)*/
+/*rateLimiter(minRateDecay,prevx,x) = prevx+newtangent:min(0)*/
 /*with {*/
     /*newtangent  = select2(tangent>0,minus,plus);*/
     /*tangent     = x- prevx;*/
-    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(maxRateDecay);*/
+    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(minRateDecay);*/
     /*minus       = tangent;// if you have to go down, you have to go down!*/
     /*avgChange   = (abs((tangent)-(tangent@1)):integrate(IM_size)*decayMult:_+1:pow(decayPower)-1)/200:SMOOTH(attackRel,0.0008):tanh*changeScale;*/
        /*//select2(abs(tangent)>maxRate,tangent,maxRate);*/
@@ -84,14 +84,14 @@ SMOOTH(a, r,  x) =
     /*delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
     /*};*/
 
-rateLimiter(maxRateDecay,prevx,x) = prevx+newtangent:min(0)
+rateLimiter(minRateDecay,prevx,x) = prevx+newtangent:min(0)
 with {
     newtangent  = select2(tangent>0,minus,plus);
     tangent     = x- prevx;
-    plus        = (tangent*(abs(speed):mymeter));
-//:min(maxRateDecay)
+    plus        = (tangent*speed):max(minRateDecay);
+//:min(minRateDecay)
     minus       = tangent;// if you have to go down, you have to go down!
-    speed       = select2(prevx<avgLevel,aboveAvg,belowAvg);
+    speed       = abs(select2(prevx<avgLevel,aboveAvg,belowAvg)):min(1):mymeter;
     avgLevel    = prevx:SMOOTH(attackRel,decayRel):avgMeter;
     belowAvg    = ((abs(x - avgLevel ) )*decayMult:_+1:pow(decayPower)-1)/200:tanh:pow(belowSpeed);
     aboveAvg    = aboveSpeed;
@@ -101,11 +101,11 @@ with {
     delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;
     };
 
-/*rateLimiter(maxRateDecay,prevx,x) = prevx+newtangent:min(0)*/
+/*rateLimiter(minRateDecay,prevx,x) = prevx+newtangent:min(0)*/
 /*with {*/
     /*newtangent  = select2(tangent>0,minus,plus);*/
     /*tangent     = x- prevx;*/
-    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(maxRateDecay);*/
+    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(minRateDecay);*/
     /*minus       = tangent;// if you have to go down, you have to go down!*/
     /*avgChange   = (tangent:nrSignChange(IM_size)*decayMult+1:pow(decayPower)-1)/200:SMOOTH(attackRel,0.0008):tanh*changeScale;*/
        /*//select2(abs(tangent)>maxRate,tangent,maxRate);*/
@@ -119,10 +119,10 @@ with {
 time_ratio_target_atk = 8.0;
 time_ratio_attack(t) = exp(1) / ( t * SR * time_ratio_target_atk );
 
-rateLimit = ( rateLimiter(maxRateDecay) ~ _ );
+rateLimit = ( rateLimiter(minRateDecay) ~ _ );
 
-maxRateDecay   = (hslider("[2]max decay[unit:dB/s][tooltip: ]", 96, 6, 500 , 1)/SR);
-decayMult      = (hslider("[3]decayMult[tooltip: ]", 0,2 , 0, 10 , 0.001)*100);
+minRateDecay   = (hslider("[2]min decay[unit:dB/s][tooltip: ]", 6, 0.001, 60 , 0.001)/SR);
+decayMult      = (hslider("[3]decayMult[tooltip: ]", 0.2 , 0, 10 , 0.001)*100);
 decayPower     = (hslider("[4]decayPower[tooltip: ]", 2, 0, 5 , 0.001));
 IM_size        = (hslider("[5]IM_size[tooltip: ]",256, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
 belowSpeed     = hslider("[6]belowSpeed[tooltip: ]", 20, 1, 20,   0.001);
@@ -134,7 +134,8 @@ linearXfade(x,a,b) = a*(1-x),b*x : +;
 
 limiter(x) = (Lookahead(x):releaseEnv(logRelease))~_:meter:db2linear *x@maxHoldTime;
 
-gainComputer(x) = (Lookahead(x):releaseEnv(logRelease))~_<:(_,rateLimit):linearXfade(link);
+gainComputer(x) = (Lookahead(x):releaseEnv(logRelease):rateLimit)~_;
+//gainComputer(x) = (Lookahead(x):releaseEnv(logRelease)<:(_,rateLimit):linearXfade((link*-1)+1))~_<:(_,rateLimit):linearXfade(link);
 //gainComputer(x) = (Lookahead(x)<:(releaseEnv(logRelease),rateLimit):linearXfade(link))~_;
 //gainComputer(x) = (Lookahead(x):releaseEnv(logRelease))~_;
 

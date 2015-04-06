@@ -25,7 +25,7 @@ import ("LookaheadLimiter.lib");
 //maxHoldTime = 256; // = 6ms
 //maxHoldTime = 512; // = 12ms, starts to sound OK, 84% cpu
 //maxHoldTime = 1024; // = 23ms, good sound, 185% CPU
-maxHoldTime = 2048; // = 46ms, even less distortion, but also less loud, 300% CPU
+maxHoldTime = 2048; // = 46ms, even less distortion, but can be less loud, 300% CPU
 //maxHoldTime = 8192; // = 186ms
 
 //with maxHoldTime = 1024, having maxAttackTime = 512 uses more cpu then maxAttackTime = 1024
