@@ -30,6 +30,7 @@ The maximum output level.
 ###attack shape
 
 0 gives a linear attack, 1 a strongly exponential one.
+![](https://github.com/magnetophon/LookaheadLimiter/blob/master/attack.gif)
 
 ###hold time
 
