@@ -32,8 +32,36 @@ with {
 
 time_ratio_release(t) = exp(1) / ( t * SR * time_ratio_target_rel );
 
+// by Yann Orlarey
+// 2^k : number of windows, w : size of the window in samples
+// example _ : slidemin(7,16) : _
+slidemin(k,w) = smin(w) : pmin(k,w)
+  with {
+    smin(n) = F ~ (_,_) : !,_
+      with {
+        F(k,m,x) = (k+1)%n, if(k==0, x, min(x,m));
+        if(c,t,e) = select2(c,e,t);
+      };
+    pmin(1,w) = _ <: _ , @(w) : min;
+    pmin(k,w) = _ <: pmin(1,w), (@(2*w) : pmin(k-1,w)) : min;
+  };
+
+// by Yann Orlarey
+// 2^k : number of windows, w : size of the window in samples
+// example _ : slidemax(7,16) : _
+slidemax(k,w) = smax(w) : pmax(k,w)
+  with {
+    smax(n) = F ~ (_,_) : !,_
+      with {
+        F(k,m,x) = (k+1)%n, if(k==0, x, max(x,m));
+        if(c,t,e) = select2(c,e,t);
+      };
+    pmax(1,w) = _ <: _ , @(w) : max;
+    pmax(k,w) = _ <: pmax(1,w), (@(2*w) : pmax(k-1,w)) : max;
+  };
+
 Lookahead(x,lastdown) =
-variable_hold,
+Yann_hold,
 attackGR
 :min
 with {
@@ -44,6 +72,7 @@ with {
       0:seq(i,maxHoldTime,
        (((i+1)>(maxHoldTime-holdTime))*(currentdown(x)@(i):max(lastdown))),_: min 
       );
+    Yann_hold= currentdown(x) : slidemin(64,holdTime) : max(lastdown);
     attackGR =
        0: seq(i,maxAttackTime,
          (currentdown(x)@((i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
