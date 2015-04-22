@@ -35,8 +35,12 @@ time_ratio_release(t) = exp(1) / ( t * SR * time_ratio_target_rel );
 // by Yann Orlarey
 // 2^k : number of windows, w : size of the window in samples
 // example _ : slidemin(7,16) : _
-slidemin(k,w) = smin(w) : pmin(k,w)
+slidemin(k,w,x) = variable_hold(w,x) : pmin(k,w)
   with {
+    variable_hold(w,x) =
+      0:seq(i,maxWinSize,
+       (((i+1)>(maxWinSize-w))*(x@(i))),_: min 
+      );
     smin(n) = F ~ (_,_) : !,_
       with {
         F(k,m,x) = (k+1)%n, if(k==0, x, min(x,m));
@@ -72,7 +76,7 @@ with {
       0:seq(i,maxHoldTime,
        (((i+1)>(maxHoldTime-holdTime))*(currentdown(x)@(i):max(lastdown))),_: min 
       );
-    Yann_hold= currentdown(x) : slidemin(64,holdTime) : max(lastdown);
+    Yann_hold=  slidemin(nrWin,holdTime,currentdown(x)) : max(lastdown);
     attackGR =
        0: seq(i,maxAttackTime,
          (currentdown(x)@((i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
