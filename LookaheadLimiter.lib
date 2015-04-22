@@ -81,11 +81,18 @@ with {
        0: seq(i,maxAttackTime,
          (currentdown(x)@((i+1-maxAttackTime+maxHoldTime)))*(((i+1)/maxAttackTime):attackShaper),_: min
        );
+      // in theory, attackGRrelative  should give lowr distortion, since the gain curve is smooth.
+      // neither my ear no measurements confirm this.
+      // the non-relative version tkes much less CPU, so can work with a much longer attack-time,
+      // which does lower distorion (at least for linear attack)
     attackGRrelative =
        0: seq(i,maxAttackTime,
          (currentdown(x)@((i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
        )-lastdown;
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
+    // attackShaperLookup takes shorter to compile, but uses slightly more cpu than attackShaper, even though th ater has a fixed attack shape.
+    attackShaperLookup(x)= rdtable(maxAttackTime, ( tanh((time/maxAttackTime):pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1)),int(x*maxAttackTime))
+      with { attack = 1; };
     //attackShaper(x)= tanh(x:pow(attack:attackScale)*mult)/tanh(mult);
     //attackShaper(x)= x:pow(attack:attackScale);
     attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better

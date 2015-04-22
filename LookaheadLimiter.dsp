@@ -33,10 +33,10 @@ maxHoldTime = maxWinSize*nrWin*2;//4096; // = 92ms
 maxWinSize = 32;
 nrWin = 64;
 //with maxHoldTime = 1024, having maxAttackTime = 512 uses more cpu then maxAttackTime = 1024
-maxAttackTime = 512:min(maxHoldTime);
+maxAttackTime = 1024:min(maxHoldTime);
 
 //rmsMaxSize = 1024:min(maxHoldTime);
-rmsMaxSize = 256:min(maxHoldTime);
+rmsMaxSize = 512:min(maxHoldTime);
 
 main_group(x)  = (hgroup("[1]", x));
 
