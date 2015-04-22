@@ -81,8 +81,8 @@ with {
        0: seq(i,maxAttackTime,
          (currentdown(x)@((i+1-maxAttackTime+maxHoldTime)))*(((i+1)/maxAttackTime):attackShaper),_: min
        );
-      // in theory, attackGRrelative  should give lowr distortion, since the gain curve is smooth.
-      // neither my ear no measurements confirm this.
+      // in theory, attackGRrelative  should give lower distortion, since the gain curve is smooth.
+      // neither my ear nor measurements confirm this.
       // the non-relative version tkes much less CPU, so can work with a much longer attack-time,
       // which does lower distorion (at least for linear attack)
     attackGRrelative =
@@ -90,7 +90,7 @@ with {
          (currentdown(x)@((i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
        )-lastdown;
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
-    // attackShaperLookup takes shorter to compile, but uses slightly more cpu than attackShaper, even though th ater has a fixed attack shape.
+    // attackShaperLookup takes shorter to compile, but uses slightly more cpu than attackShaper, even though the later has a fixed attack shape.
     attackShaperLookup(x)= rdtable(maxAttackTime, ( tanh((time/maxAttackTime):pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1)),int(x*maxAttackTime))
       with { attack = 1; };
     //attackShaper(x)= tanh(x:pow(attack:attackScale)*mult)/tanh(mult);
@@ -132,13 +132,13 @@ rateLimiter(minRateDecay,prevx,x) = prevx+newtangent:min(0)
 with {
     newtangent  = select2(tangent>0,minus,plus);
     tangent     = x- prevx;
-    plus        = (tangent*speed):max(minRateDecay);
+           plus        = ((tangent*speed):max(minRateDecay)*(1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(aboveSpeed:pow(2))):min(1))));
 //:min(minRateDecay)
     minus       = tangent;// if you have to go down, you have to go down!
     speed       = abs(select2(prevx<avgLevel,aboveAvg,belowAvg)):min(0.1):mymeter;
     avgLevel    = prevx:SMOOTH(decayAVG,attackAVG):avgMeter;
     belowAvg    = ((abs(x - avgLevel ) )*decayMult:_+1:pow(decayPower)-1)/200:tanh:pow(belowSpeed);
-    aboveAvg    = aboveSpeed;
+    aboveAvg    = 0;
     //avgChange   = (abs(x-(integrate(IM_size,prevx):SMOOTH(attackAVG,decayAVG)))*decayMult:_+1:pow(decayPower)-1)/200:tanh*changeScale;
        //select2(abs(tangent)>maxRate,tangent,maxRate);
     integrate(size,x) = delaysum(size, x)/size;
@@ -165,14 +165,15 @@ time_ratio_attack(t) = exp(1) / ( t * SR * time_ratio_target_atk );
 
 rateLimit = ( rateLimiter(minRateDecay) ~ _ );
 
-minRateDecay   = (hslider("[2]min decay[unit:dB/s][tooltip: ]", 9, 0.001, 60 , 0.001)/SR);
+minRateDecay   = (hslider("[2]min decay[unit:dB/s][tooltip: ]", 15, 0.001, 60 , 0.001)/SR);
 decayMult      = (hslider("[3]decayMult[tooltip: ]", 1 , 0, 10 , 0.001)*100);
 decayPower     = (hslider("[4]decayPower[tooltip: ]", 1, 0, 5 , 0.001));
 IM_size        = (hslider("[5]IM_size[tooltip: ]",256, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
 belowSpeed     = hslider("[6]belowSpeed[tooltip: ]", 9, 1, 20,   0.001);
-aboveSpeed     = hslider("[7]aboveSpeed[tooltip: ]", 0, 0, 1,   0.001)*0.001;
+aboveSpeed     = hslider("[7]aboveSpeed[tooltip: ]", 0.5, 0, 1,   0.001);
+//aboveSpeed     = hslider("[7]aboveSpeed[tooltip: ]", 0, 0, 1,   0.001)*0.001;
 attackAVG      = (time_ratio_attack(hslider("[8] Attack [unit:ms]   [tooltip:  ]", 1400, 50, 5000, 1)/1000)) ;
-decayAVG       = (time_ratio_attack(hslider("[9] Decay [unit:ms]   [tooltip:  ]", 50, 50, 5000, 1)/1000)) ;
+decayAVG       = (time_ratio_attack(hslider("[9] Decay [unit:ms]   [tooltip:  ]", 300, 50, 5000, 1)/1000)) ;
 
 linearXfade(x,a,b) = a*(1-x),b*x : +;
 
