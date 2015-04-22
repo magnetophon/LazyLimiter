@@ -79,6 +79,10 @@ with {
     Yann_hold=  slidemin(nrWin,holdTime,currentdown(x)) : max(lastdown);
     attackGR =
        0: seq(i,maxAttackTime,
+         (currentdown(x)@((i+1-maxAttackTime+maxHoldTime)))*(((i+1)/maxAttackTime):attackShaper),_: min
+       );
+    attackGRrelative =
+       0: seq(i,maxAttackTime,
          (currentdown(x)@((i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
        )-lastdown;
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
