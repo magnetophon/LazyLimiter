@@ -67,7 +67,7 @@ slidemax(k,w) = smax(w) : pmax(k,w)
 
 Lookahead(x,lastdown) =
 Yann_hold,
-attackGR
+attackGRrelative
 :min
 with {
     // this one should be more efficient: fixed hold time
@@ -88,7 +88,7 @@ with {
       // which does lower distorion (at least for linear attack)
     attackGRrelative =
        0: seq(i,maxAttackTime,
-         (currentdown(x)@((i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
+         (currentdown(x)+lastdown)@((i+1-maxAttackTime+maxHoldTime))*(((i+1)/maxAttackTime):attackShaper),_: min
        )-lastdown;
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
     // attackShaperLookup takes shorter to compile, but uses slightly more cpu than attackShaper, even though the later has a fixed attack shape.
