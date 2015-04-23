@@ -40,7 +40,7 @@ slidemin(k,w,x) = variable_hold(w,x) : pmin(k,w)
   with {
     variable_hold(w,x) =
       0:seq(i,maxWinSize,
-       (((i+1)>(maxWinSize-w))*(x@(i))),_: min 
+       (((i+1)>(maxWinSize-w))*(x@(i))),_: min
       );
     smin(n) = F ~ (_,_) : !,_
       with {
@@ -66,8 +66,8 @@ slidemax(k,w) = smax(w) : pmax(k,w)
   };
 
 Lookahead(x,lastdown) =
-Yann_hold,
-attackGRrelative
+attackGR,
+Yann_hold
 :min
 with {
     // this one should be more efficient: fixed hold time
@@ -135,7 +135,7 @@ with {
     tangent     = x- prevx;
    plus        = (
      (baserelease)*
-     (1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(antiPump:pow(2))):min(1)))*
+     (1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(antiPump:pow(2))*4):min(1)))*
      (1-(((prevx - avgLevel )*((prevx - avgLevel )<0)*(transientSpeed:pow(2)*100))))
      ):min(tangent);
       //plus        = ((tangent*speed):max(baserelease)*(1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(antiPump:pow(2))):min(1))));

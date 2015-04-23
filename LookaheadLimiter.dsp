@@ -19,6 +19,8 @@ declare copyright "(C) 2014 Bart Brouns";
 
 import ("LookaheadLimiter.lib");
 
+
+SampleRate = 44100;
 //Lookahead and LookaheadPar need a power of 2 as a size
 //maxHoldTime = 4; // = 0.1ms, for looking at the block diagram
 //maxHoldTime = 32; // =
@@ -30,38 +32,38 @@ import ("LookaheadLimiter.lib");
 maxHoldTime = maxWinSize*nrWin*2;//4096; // = 92ms
 //maxHoldTime = 4096; // = 92ms
 //maxHoldTime = 8192; // = 186ms
-maxWinSize = 32;
+maxWinSize = int(32*SampleRate/44100);
 nrWin = 64;
 //with maxHoldTime = 1024, having maxAttackTime = 512 uses more cpu then maxAttackTime = 1024
-maxAttackTime = 1024:min(maxHoldTime);
+maxAttackTime = int(1024*SampleRate/44100):min(maxHoldTime);
 
 //rmsMaxSize = 1024:min(maxHoldTime);
-rmsMaxSize = 512:min(maxHoldTime);
+rmsMaxSize = int(512*SampleRate/44100):min(maxHoldTime);
 
 main_group(x)  = (hgroup("[1]", x));
 
-knob_group1(x)   = main_group(vgroup("[0] distortion control [tooltip: this section controls the amount of distortion, vs the amount of GR]", x));
-  threshold   = knob_group1(hslider("[0]threshold [unit:dB]   [tooltip: maximum output level]", -0.5, -60, 0, 0.1));
+knob_group1(x)   = main_group(vgroup("[0] distortion control [tooltip: this section controls the amount of distortion, versus the amount of GR]", x));
+  threshold   = knob_group1(hslider("[0]threshold [unit:dB]   [tooltip: maximum output level in dB]", -0.5, -60, 0, 0.1));
   attack      = knob_group1(hslider("[1]attack shape[tooltip: attack speed]", 1 , 0, 1 , 0.001));
   //hardcoding holdTime to maxHoldTime uses more cpu then having a fader!
-  holdTime    = int(knob_group1(hslider("[2]hold time[tooltip: maximum hold time]", maxWinSize, 1, maxWinSize , 1)));
-  release     = knob_group1(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 10, 6, 500 , 1)/SR);
+  maxHoldMs = maxHoldTime*1000/SampleRate;
+  holdTime    = int(knob_group1(hslider("[2]maximum hold time[unit:ms] [tooltip: maximum hold time in ms]", maxHoldMs, 0.1, maxHoldMs ,0.1))/1000*SampleRate/nrWin/2);
+  release     = knob_group1(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 10, 6, 500 , 1)/SampleRate);
   minRelease  = knob_group1(hslider("[4]minimum release time[unit:ms]   [tooltip: minimum time in ms for the GR to go up]",10, 0.1, 500, 0.1)/1000):time_ratio_release;
   time_ratio_target_rel =  knob_group1(hslider("[5]release shape", 1, 0.5, 5.0, 0.001));
   // hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
-  link  = knob_group1(hslider("[6]stereo link[tooltip: ]", 1, 0, 1 , 0.001));
+  link  = knob_group1(hslider("[6]stereo link[tooltip: 0 means independent, 1 fully linked]", 1, 0, 1 , 0.001));
 
 knob_group2(x)   = main_group(vgroup("[1] musical release [tooltip: this section fine tunes the release to sound musical]", x));
-  baserelease   = knob_group2(hslider("[0]base release rate[unit:dB/s][tooltip: release rate when the GR is at AVG]", 15, 0.001, 60 , 0.001)/SR);
-  transientSpeed     = knob_group2(hslider("[1]transient speed[tooltip: increase release speed when the GR is below AVG ]", 0.5, 0, 1,   0.001));
-  antiPump     = knob_group2(hslider("[2]anti pump[tooltip: decrease release speed when the GR is above AVG ]", 0.5, 0, 1,   0.001));
+  baserelease   = knob_group2(hslider("[0]base release rate[unit:dB/s][tooltip: release rate when the GR is at AVG, in dB/s]", 15, 0.1, 60 , 0.1)/SampleRate);
+  transientSpeed     = knob_group2(hslider("[1]transient speed[tooltip:  speed up the release when the GR is below AVG ]", 0.5, 0, 1,   0.001));
+  antiPump     = knob_group2(hslider("[2]anti pump[tooltip: slow down the release when the GR is above AVG ]", 0.5, 0, 1,   0.001));
   attackAVG      = knob_group2(time_ratio_attack(hslider("[3] AVG attack [unit:ms]   [tooltip: time in ms for the AVG to go down ]", 1400, 50, 5000, 1)/1000)) ;
   releaseAVG       = knob_group2(time_ratio_attack(hslider("[4] AVG release [unit:ms]   [tooltip:  time in ms for the AVG to go up]", 300, 50, 5000, 1)/1000)) ;
 
-meter_group(x)  = main_group(hgroup("[2]", x));
-  GRmeter_group(x)  =meter_group(hgroup("[0] GR [tooltip: gain reduction in dB]", x));
+  GRmeter_group(x)  =main_group(hgroup("[2] GR [tooltip: gain reduction in dB]", x));
     meter    = GRmeter_group(_<:(_, ( (vbargraph("[0][unit:dB]", -20, 0)))):attach);
-  AVGmeter_group(x)  = meter_group(hgroup("[1] AVG [tooltip: average gain reduction in dB]", x));
+  AVGmeter_group(x)  = main_group(hgroup("[3] AVG [tooltip: average gain reduction in dB]", x));
     avgMeter    = AVGmeter_group(_<:(_, ( (vbargraph("[1][unit:dB]", -20, 0)))):attach);
 
 
