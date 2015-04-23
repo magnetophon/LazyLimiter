@@ -30,11 +30,12 @@ with {
     env (r, prevx, x)= select2( (x > prevx), x, (x*r)+(prevx * (1-r))     );
 };
 
-time_ratio_release(t) = exp(1) / ( t * SR * time_ratio_target_rel );
+time_ratio_release(t) = exp(1) / ( t * SR);// * time_ratio_target_rel );
 
-// by Yann Orlarey
-// 2^k : number of windows, w : size of the window in samples
-// example _ : slidemin(7,16) : _
+// slidemin by Yann Orlarey, with variable_hold by Bart Brouns.
+// 2*k : number of windows, w : size of the window in samples
+// total window siz in samples: 2*k*w
+// example _ : slidemin(16,16) : _
 slidemin(k,w,x) = variable_hold(w,x) : pmin(k,w)
   with {
     variable_hold(w,x) =
@@ -128,14 +129,19 @@ SMOOTH(a, r,  x) =
     /*delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
     /*};*/
 
-rateLimiter(minRateDecay,prevx,x) = prevx+newtangent:min(0)
+rateLimiter(minRateDecay,prevx,x) = (prevx+newtangent):min(0)
 with {
     newtangent  = select2(tangent>0,minus,plus);
     tangent     = x- prevx;
-           plus        = ((tangent*speed):max(minRateDecay)*(1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(aboveSpeed:pow(2))):min(1))));
+   plus        = (
+     (minRateDecay)*
+     (1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(aboveSpeed:pow(2))):min(1)))*
+     (1-(((prevx - avgLevel )*((prevx - avgLevel )<0)*(belowSpeed:pow(2)*100))))
+     ):min(tangent);
+      //plus        = ((tangent*speed):max(minRateDecay)*(1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(aboveSpeed:pow(2))):min(1))));
 //:min(minRateDecay)
     minus       = tangent;// if you have to go down, you have to go down!
-    speed       = abs(select2(prevx<avgLevel,aboveAvg,belowAvg)):min(0.1):mymeter;
+    speed       = abs(select2(prevx<avgLevel,aboveAvg,belowAvg)):min(0.5):mymeter;
     avgLevel    = prevx:SMOOTH(decayAVG,attackAVG):avgMeter;
     belowAvg    = ((abs(x - avgLevel ) )*decayMult:_+1:pow(decayPower)-1)/200:tanh:pow(belowSpeed);
     aboveAvg    = 0;
@@ -169,7 +175,8 @@ minRateDecay   = (hslider("[2]min decay[unit:dB/s][tooltip: ]", 15, 0.001, 60 , 
 decayMult      = (hslider("[3]decayMult[tooltip: ]", 1 , 0, 10 , 0.001)*100);
 decayPower     = (hslider("[4]decayPower[tooltip: ]", 1, 0, 5 , 0.001));
 IM_size        = (hslider("[5]IM_size[tooltip: ]",256, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
-belowSpeed     = hslider("[6]belowSpeed[tooltip: ]", 9, 1, 20,   0.001);
+belowSpeed     = hslider("[6]belowSpeed[tooltip: ]", 0.5, 0, 1,   0.001);
+      //belowSpeed     = hslider("[6]belowSpeed[tooltip: ]", 9, 1, 20,   0.001);
 aboveSpeed     = hslider("[7]aboveSpeed[tooltip: ]", 0.5, 0, 1,   0.001);
 //aboveSpeed     = hslider("[7]aboveSpeed[tooltip: ]", 0, 0, 1,   0.001)*0.001;
 attackAVG      = (time_ratio_attack(hslider("[8] Attack [unit:ms]   [tooltip:  ]", 1400, 50, 5000, 1)/1000)) ;

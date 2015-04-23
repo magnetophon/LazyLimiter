@@ -49,14 +49,14 @@ attack      = knob_group(hslider("[1]attack shape[tooltip: attack speed]", 1 , 0
 holdTime    = int(knob_group(hslider("[2]hold time[tooltip: maximum hold time]", maxWinSize, 1, maxWinSize , 1)));
 release     = knob_group(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 10, 6, 500 , 1)/SR);
 logRelease  = knob_group(hslider("[4]release time[unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",10, 0.1, 500, 0.1)/1000):time_ratio_release;
-time_ratio_target_rel =  knob_group(hslider("[5]release shape", 1, 0.2, 5.0, 0.001));
+time_ratio_target_rel =  knob_group(hslider("[5]release shape", 1, 0.5, 5.0, 0.001));
 // hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
 link  = knob_group(hslider("[6]stereo link[tooltip: ]", 1, 0, 1 , 0.001));
 
 
 meter    = meter_group(_<:(_, ( (vbargraph("[0]GR[unit:dB][tooltip: gain reduction in dB]", -60, 0)))):attach);
 avgMeter    = meter_group(_<:(_, ( (vbargraph("[1]avg[unit:dB][tooltip: avg level in dB]", -60, 0)))):attach);
-mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]", 0, .1)))):attach);
+mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]", 0, 0.5)))):attach);
 //process = limiter ,limiter;
 //process = naiveStereoLimiter;
 //process = ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min ));
