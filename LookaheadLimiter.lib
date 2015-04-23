@@ -86,9 +86,10 @@ with {
       // neither my ear nor measurements confirm this.
       // the non-relative version tkes much less CPU, so can work with a much longer attack-time,
       // which does lower distorion (at least for linear attack)
+      //odly enough, with minimalStereoLimiter, the both variants use about the same amount of CPU
     attackGRrelative =
        0: seq(i,maxAttackTime,
-         (currentdown(x)+lastdown)@((i+1-maxAttackTime+maxHoldTime))*(((i+1)/maxAttackTime):attackShaper),_: min
+         ((currentdown(x)@(i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
        )-lastdown;
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
     // attackShaperLookup takes shorter to compile, but uses slightly more cpu than attackShaper, even though the later has a fixed attack shape.
@@ -214,6 +215,7 @@ simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y)
 //maxHoldTime = 2048 maxAttackTime = 1024
 //jack: 52% CPU 485.55s
 naiveStereoLimiter(x,y) = (gainComputer(x),gainComputer(y)):min:meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+minimalStereoLimiter(x,y) = gainComputer((abs(x),abs(y)):max):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 
 
 
