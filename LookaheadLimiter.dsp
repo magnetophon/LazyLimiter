@@ -40,22 +40,31 @@ rmsMaxSize = 512:min(maxHoldTime);
 
 main_group(x)  = (hgroup("[1]", x));
 
-knob_group(x)   = main_group(vgroup("[0]", x));
-meter_group(x)  = main_group(hgroup("[1]", x));
+knob_group1(x)   = main_group(vgroup("[0] distortion control [tooltip: this section controls the amount of distortion, vs the amount of GR]", x));
+  threshold   = knob_group1(hslider("[0]threshold [unit:dB]   [tooltip: maximum output level]", -0.5, -60, 0, 0.1));
+  attack      = knob_group1(hslider("[1]attack shape[tooltip: attack speed]", 1 , 0, 1 , 0.001));
+  //hardcoding holdTime to maxHoldTime uses more cpu then having a fader!
+  holdTime    = int(knob_group1(hslider("[2]hold time[tooltip: maximum hold time]", maxWinSize, 1, maxWinSize , 1)));
+  release     = knob_group1(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 10, 6, 500 , 1)/SR);
+  logRelease  = knob_group1(hslider("[4]release time[unit:ms]   [tooltip: time in ms for the GR to go up]",10, 0.1, 500, 0.1)/1000):time_ratio_release;
+  time_ratio_target_rel =  knob_group1(hslider("[5]release shape", 1, 0.5, 5.0, 0.001));
+  // hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
+  link  = knob_group1(hslider("[6]stereo link[tooltip: ]", 1, 0, 1 , 0.001));
 
-threshold   = knob_group(hslider("[0]threshold [unit:dB]   [tooltip: maximum output level]", -0.5, -60, 0, 0.1));
-attack      = knob_group(hslider("[1]attack shape[tooltip: attack speed]", 1 , 0, 1 , 0.001));
-//hardcoding holdTime to maxHoldTime uses more cpu then having a fader!
-holdTime    = int(knob_group(hslider("[2]hold time[tooltip: maximum hold time]", maxWinSize, 1, maxWinSize , 1)));
-release     = knob_group(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 10, 6, 500 , 1)/SR);
-logRelease  = knob_group(hslider("[4]release time[unit:ms]   [tooltip: Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')]",10, 0.1, 500, 0.1)/1000):time_ratio_release;
-time_ratio_target_rel =  knob_group(hslider("[5]release shape", 1, 0.5, 5.0, 0.001));
-// hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
-link  = knob_group(hslider("[6]stereo link[tooltip: ]", 1, 0, 1 , 0.001));
+knob_group2(x)   = main_group(vgroup("[1] musical release [tooltip: this section fine tunes the release to sound musical]", x));
+  baseDecay   = knob_group2(hslider("[0]base decay rate[unit:dB/s][tooltip: decay rate when the GR is at AVG]", 15, 0.001, 60 , 0.001)/SR);
+  transientSpeed     = knob_group2(hslider("[1]transient speed[tooltip: increase decay speed when the GR is below AVG ]", 0.5, 0, 1,   0.001));
+  antiPump     = knob_group2(hslider("[2]anti pump[tooltip: decrease decay speed when the GR is above AVG ]", 0.5, 0, 1,   0.001));
+  attackAVG      = knob_group2(time_ratio_attack(hslider("[3] AVG attack [unit:ms]   [tooltip: time in ms for the AVG to go down ]", 1400, 50, 5000, 1)/1000)) ;
+  decayAVG       = knob_group2(time_ratio_attack(hslider("[4] AVG decay [unit:ms]   [tooltip:  time in ms for the AVG to go up]", 300, 50, 5000, 1)/1000)) ;
+
+meter_group(x)  = main_group(hgroup("[2]", x));
+  GRmeter_group(x)  =meter_group(hgroup("[0] GR [tooltip: gain reduction in dB]", x));
+    meter    = GRmeter_group(_<:(_, ( (vbargraph("[0][unit:dB]", -20, 0)))):attach);
+  AVGmeter_group(x)  = meter_group(hgroup("[1] AVG [tooltip: average gain reduction in dB]", x));
+    avgMeter    = AVGmeter_group(_<:(_, ( (vbargraph("[1][unit:dB]", -20, 0)))):attach);
 
 
-meter    = meter_group(_<:(_, ( (vbargraph("[0]GR[unit:dB][tooltip: gain reduction in dB]", -60, 0)))):attach);
-avgMeter    = meter_group(_<:(_, ( (vbargraph("[1]avg[unit:dB][tooltip: avg level in dB]", -60, 0)))):attach);
 mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]", 0, 0.5)))):attach);
 //process = limiter ,limiter;
 //process = naiveStereoLimiter;

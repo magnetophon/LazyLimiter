@@ -117,11 +117,11 @@ SMOOTH(a, r,  x) =
 	(_ * (1 - select2( (x < _), a, r)))) ~ (_<:_,_,_);
 
 
-/*rateLimiter(minRateDecay,prevx,x) = prevx+newtangent:min(0)*/
+/*rateLimiter(baseDecay,prevx,x) = prevx+newtangent:min(0)*/
 /*with {*/
     /*newtangent  = select2(tangent>0,minus,plus);*/
     /*tangent     = x- prevx;*/
-    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(minRateDecay);*/
+    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(baseDecay);*/
     /*minus       = tangent;// if you have to go down, you have to go down!*/
     /*avgChange   = (abs((tangent)-(tangent@1)):integrate(IM_size)*decayMult:_+1:pow(decayPower)-1)/200:SMOOTH(attackAVG,0.0008):tanh*changeScale;*/
        /*//select2(abs(tangent)>maxRate,tangent,maxRate);*/
@@ -129,21 +129,21 @@ SMOOTH(a, r,  x) =
     /*delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
     /*};*/
 
-rateLimiter(minRateDecay,prevx,x) = (prevx+newtangent):min(0)
+rateLimiter(baseDecay,prevx,x) = (prevx+newtangent):min(0)
 with {
     newtangent  = select2(tangent>0,minus,plus);
     tangent     = x- prevx;
    plus        = (
-     (minRateDecay)*
-     (1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(aboveSpeed:pow(2))):min(1)))*
-     (1-(((prevx - avgLevel )*((prevx - avgLevel )<0)*(belowSpeed:pow(2)*100))))
+     (baseDecay)*
+     (1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(antiPump:pow(2))):min(1)))*
+     (1-(((prevx - avgLevel )*((prevx - avgLevel )<0)*(transientSpeed:pow(2)*100))))
      ):min(tangent);
-      //plus        = ((tangent*speed):max(minRateDecay)*(1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(aboveSpeed:pow(2))):min(1))));
-//:min(minRateDecay)
+      //plus        = ((tangent*speed):max(baseDecay)*(1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(antiPump:pow(2))):min(1))));
+//:min(baseDecay)
     minus       = tangent;// if you have to go down, you have to go down!
     speed       = abs(select2(prevx<avgLevel,aboveAvg,belowAvg)):min(0.5):mymeter;
     avgLevel    = prevx:SMOOTH(decayAVG,attackAVG):avgMeter;
-    belowAvg    = ((abs(x - avgLevel ) )*decayMult:_+1:pow(decayPower)-1)/200:tanh:pow(belowSpeed);
+    belowAvg    = ((abs(x - avgLevel ) )*decayMult:_+1:pow(decayPower)-1)/200:tanh:pow(transientSpeed);
     aboveAvg    = 0;
     //avgChange   = (abs(x-(integrate(IM_size,prevx):SMOOTH(attackAVG,decayAVG)))*decayMult:_+1:pow(decayPower)-1)/200:tanh*changeScale;
        //select2(abs(tangent)>maxRate,tangent,maxRate);
@@ -151,11 +151,11 @@ with {
     delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;
     };
 
-/*rateLimiter(minRateDecay,prevx,x) = prevx+newtangent:min(0)*/
+/*rateLimiter(baseDecay,prevx,x) = prevx+newtangent:min(0)*/
 /*with {*/
     /*newtangent  = select2(tangent>0,minus,plus);*/
     /*tangent     = x- prevx;*/
-    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(minRateDecay);*/
+    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(baseDecay);*/
     /*minus       = tangent;// if you have to go down, you have to go down!*/
     /*avgChange   = (tangent:nrSignChange(IM_size)*decayMult+1:pow(decayPower)-1)/200:SMOOTH(attackAVG,0.0008):tanh*changeScale;*/
        /*//select2(abs(tangent)>maxRate,tangent,maxRate);*/
@@ -169,18 +169,11 @@ with {
 time_ratio_target_atk = 8.0;
 time_ratio_attack(t) = exp(1) / ( t * SR * time_ratio_target_atk );
 
-rateLimit = ( rateLimiter(minRateDecay) ~ _ );
+rateLimit = ( rateLimiter(baseDecay) ~ _ );
 
-minRateDecay   = (hslider("[2]min decay[unit:dB/s][tooltip: ]", 15, 0.001, 60 , 0.001)/SR);
 decayMult      = (hslider("[3]decayMult[tooltip: ]", 1 , 0, 10 , 0.001)*100);
 decayPower     = (hslider("[4]decayPower[tooltip: ]", 1, 0, 5 , 0.001));
 IM_size        = (hslider("[5]IM_size[tooltip: ]",256, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
-belowSpeed     = hslider("[6]belowSpeed[tooltip: ]", 0.5, 0, 1,   0.001);
-      //belowSpeed     = hslider("[6]belowSpeed[tooltip: ]", 9, 1, 20,   0.001);
-aboveSpeed     = hslider("[7]aboveSpeed[tooltip: ]", 0.5, 0, 1,   0.001);
-//aboveSpeed     = hslider("[7]aboveSpeed[tooltip: ]", 0, 0, 1,   0.001)*0.001;
-attackAVG      = (time_ratio_attack(hslider("[8] Attack [unit:ms]   [tooltip:  ]", 1400, 50, 5000, 1)/1000)) ;
-decayAVG       = (time_ratio_attack(hslider("[9] Decay [unit:ms]   [tooltip:  ]", 300, 50, 5000, 1)/1000)) ;
 
 linearXfade(x,a,b) = a*(1-x),b*x : +;
 
