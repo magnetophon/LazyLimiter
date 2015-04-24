@@ -44,7 +44,7 @@ main_group(x)  = (hgroup("[1]", x));
 
 knob_group1(x)   = main_group(vgroup("[0] distortion control [tooltip: this section controls the amount of distortion, versus the amount of GR]", x));
   threshold   = knob_group1(hslider("[0]threshold [unit:dB]   [tooltip: maximum output level in dB]", -0.5, -60, 0, 0.1));
-  attack      = knob_group1(hslider("[1]attack shape[tooltip: attack speed]", 1 , 0, 1 , 0.001));
+  attack      = knob_group1(hslider("[1]attack shape[tooltip: 0 gives a linear attack (slow), 1 a strongly exponential one (fast)]", 1 , 0, 1 , 0.001));
   //hardcoding holdTime to maxHoldTime uses more cpu then having a fader!
   maxHoldMs = maxHoldTime*1000/SampleRate;
   holdTime    = int(knob_group1(hslider("[2]maximum hold time[unit:ms] [tooltip: maximum hold time in ms]", maxHoldMs, 0.1, maxHoldMs ,0.1))/1000*SampleRate/nrWin/2);
@@ -56,7 +56,7 @@ knob_group1(x)   = main_group(vgroup("[0] distortion control [tooltip: this sect
 
 knob_group2(x)   = main_group(vgroup("[1] musical release [tooltip: this section fine tunes the release to sound musical]", x));
   baserelease   = knob_group2(hslider("[0]base release rate[unit:dB/s][tooltip: release rate when the GR is at AVG, in dB/s]", 15, 0.1, 60 , 0.1)/SampleRate);
-  transientSpeed     = knob_group2(hslider("[1]transient speed[tooltip:  speed up the release when the GR is below AVG ]", 0.5, 0, 1,   0.001));
+  transientSpeed     = knob_group2(hslider("[1]transient speed[tooltip:  speed up the release when the GR is below AVG ]", 0.25, 0, 1,   0.001));
   antiPump     = knob_group2(hslider("[2]anti pump[tooltip: slow down the release when the GR is above AVG ]", 0.5, 0, 1,   0.001));
   attackAVG      = knob_group2(time_ratio_attack(hslider("[3] AVG attack [unit:ms]   [tooltip: time in ms for the AVG to go down ]", 1400, 50, 5000, 1)/1000)) ;
   releaseAVG       = knob_group2(time_ratio_attack(hslider("[4] AVG release [unit:ms]   [tooltip:  time in ms for the AVG to go up]", 300, 50, 5000, 1)/1000)) ;
@@ -64,7 +64,7 @@ knob_group2(x)   = main_group(vgroup("[1] musical release [tooltip: this section
   GRmeter_group(x)  =main_group(hgroup("[2] GR [tooltip: gain reduction in dB]", x));
     meter    = GRmeter_group(_<:(_, ( (vbargraph("[0][unit:dB]", -20, 0)))):attach);
   AVGmeter_group(x)  = main_group(hgroup("[3] AVG [tooltip: average gain reduction in dB]", x));
-    avgMeter    = AVGmeter_group(_<:(_, ( (vbargraph("[1][unit:dB]", -20, 0)))):attach);
+    avgMeter    = AVGmeter_group(_<:(_,(_+24: ( (vbargraph("[1][unit:dB]", -20, 0))))):attach);
 
 
 mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]", 0, 0.5)))):attach);
