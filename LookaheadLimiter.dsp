@@ -33,9 +33,9 @@ maxHoldTime = maxWinSize*nrWin*2;//4096; // = 92ms
 //maxHoldTime = 4096; // = 92ms
 //maxHoldTime = 8192; // = 186ms
 maxWinSize = int(32*SampleRate/44100);
-nrWin = 64;
+nrWin = 128;
 //with maxHoldTime = 1024, having maxAttackTime = 512 uses more cpu then maxAttackTime = 1024
-maxAttackTime = int(1024*SampleRate/44100):min(maxHoldTime);
+maxAttackTime = int(24*SampleRate/44100):min(maxHoldTime);
 
 //rmsMaxSize = 1024:min(maxHoldTime);
 rmsMaxSize = int(512*SampleRate/44100):min(maxHoldTime);
@@ -60,11 +60,12 @@ knob_group2(x)   = main_group(vgroup("[1] musical release [tooltip: this section
   antiPump     = knob_group2(hslider("[2]anti pump[tooltip: slow down the release when the GR is above AVG ]", 0.5, 0, 1,   0.001));
   attackAVG      = knob_group2(time_ratio_attack(hslider("[3] AVG attack [unit:ms]   [tooltip: time in ms for the AVG to go down ]", 1400, 50, 5000, 1)/1000)) ;
   releaseAVG       = knob_group2(time_ratio_attack(hslider("[4] AVG release [unit:ms]   [tooltip:  time in ms for the AVG to go up]", 300, 50, 5000, 1)/1000)) ;
+  offset       = knob_group2((hslider("[5] offset [unit:dB]   [tooltip:  ", 0, 0, 30, 0.1))) ;
 
   GRmeter_group(x)  =main_group(hgroup("[2] GR [tooltip: gain reduction in dB]", x));
-    meter    = GRmeter_group(_<:(_, ( (vbargraph("[0][unit:dB]", -20, 0)))):attach);
-  AVGmeter_group(x)  = main_group(hgroup("[3] AVG [tooltip: average gain reduction in dB]", x));
-    avgMeter    = AVGmeter_group(_<:(_,(_+24: ( (vbargraph("[1][unit:dB]", -20, 0))))):attach);
+    meter    =  GRmeter_group(_<:(_,(_:min(0):max(-20):( (vbargraph("[0][unit:dB]", -20, 0))))):attach);
+  AVGmeter_group(x)  = (main_group(hgroup("[3] AVG [tooltip: average gain reduction in dB]", x)));
+    avgMeter    = AVGmeter_group((_<:(_,(_:min(0):max(-20):( (vbargraph("[1][unit:dB]", -20, 0))))):attach));
 
 
 mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]", 0, 0.5)))):attach);
@@ -73,6 +74,7 @@ mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]",
 //process = ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min ));
 //process = simpleStereoLimiter;
 process = minimalStereoLimiter;
+//process =avgMeter(offset);
 //process = stereoLimiter;
  //process(x)= rdtable(maxAttackTime, (5)  ,int(x*maxAttackTime));
  //process(x)= rdtable(int(maxAttackTime), tanh((6/maxAttackTime):pow(1:attackScale)),int(x*maxAttackTime));

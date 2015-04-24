@@ -21,8 +21,8 @@ import ("music.lib");  //for linear2db
 
 //todo: mid-side, auto-release
 
-currentLevel(x)     = ((abs(x)):linear2db)+24;
-currentdown(x)      = 0-(((currentLevel(x))-threshold):max(0));
+currentLevel(x)     = ((abs(x)):linear2db);
+currentdown(x)      = 0-(((currentLevel(x))-(threshold-offset)):max(0));
 
 // smoothing function, 0 attack, release coefficient "r" and signal x
 releaseEnv(r, x) = x:(env(r))~_
@@ -181,7 +181,7 @@ IM_size        = (hslider("[5]IM_size[tooltip: ]",256, 1,   rmsMaxSize,   1)*441
 
 linearXfade(x,a,b) = a*(1-x),b*x : +;
 
-limiter(x) = (Lookahead(x):releaseEnv(minRelease))~_+24:meter:db2linear *x@maxHoldTime;
+limiter(x) = (Lookahead(x):releaseEnv(minRelease))~_+(offset@maxHoldTime):meter:db2linear *x@maxHoldTime;
 
 gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit)~_;
 //gainComputer(x) = (Lookahead(x):releaseEnv(minRelease)<:(_,rateLimit):linearXfade((link*-1)+1))~_<:(_,rateLimit):linearXfade(link);
@@ -198,7 +198,7 @@ stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,
 
 
 
-stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((_+24:meter:db2linear)*x@maxHoldTime,((_+24:meter:db2linear)*y@maxHoldTime)));
+stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((_+(offset@maxHoldTime):meter:db2linear)*x@maxHoldTime,((_+(offset@maxHoldTime):meter:db2linear)*y@maxHoldTime)));
 
 //faust2jaqt -t 999999 -time -sch -vs 4096 -mcd 8192 LookaheadLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
@@ -207,9 +207,9 @@ stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((_+24:meter:db2linear)*x@maxHo
 //faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LookaheadLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
 //jack: 80% CPU
-simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y):releaseEnv(minRelease))):min)~(_<:(_,_))+24:meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y):releaseEnv(minRelease))):min)~(_<:(_,_))+(offset@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 
-//simpleStereoLimiter(x,y) = (LookaheadPar(x),LookaheadPar(y):min:releaseEnv(minRelease))~(_<:(_,_))+24:meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+//simpleStereoLimiter(x,y) = (LookaheadPar(x),LookaheadPar(y):min:releaseEnv(minRelease))~(_<:(_,_))+(offset@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 
 
 //faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LookaheadLimiter.dsp
@@ -217,8 +217,8 @@ simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y)
 //jack: 52% CPU  169.49s
 //maxHoldTime = 2048 maxAttackTime = 1024
 //jack: 52% CPU 485.55s
-naiveStereoLimiter(x,y) = (gainComputer(x),gainComputer(y)):min+24:meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
-minimalStereoLimiter(x,y) = gainComputer((abs(x),abs(y)):max)+24:meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+naiveStereoLimiter(x,y) = (gainComputer(x),gainComputer(y)):min+(offset@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+minimalStereoLimiter(x,y) = gainComputer((abs(x),abs(y)):max):meter+(offset@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 
 
 
