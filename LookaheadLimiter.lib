@@ -65,7 +65,7 @@ slidemax(k,w) = smax(w) : pmax(k,w)
     pmax(k,w) = _ <: pmax(1,w), (@(2*w) : pmax(k-1,w)) : max;
   };
 
-Lookahead(x,lastdown) =
+Lookahead(x,lastdown,avgLevel) =
 attackGR,
 Yann_hold
 :min
@@ -77,7 +77,7 @@ with {
       0:seq(i,maxHoldTime,
        (((i+1)>(maxHoldTime-holdTime))*(currentdown(x)@(i):max(lastdown))),_: min 
       );
-    Yann_hold=  slidemin(nrWin,holdTime,currentdown(x)) : max(lastdown);
+    Yann_hold=  slidemin(nrWin,(holdTime/(1+(((avgLevel-lastdown)/dynHoldDiv):pow(dynHoldPow):max(0)*dynHold*dynHoldDiv):min(10))),currentdown(x)) : max(lastdown);
     attackGR =
        0: seq(i,maxAttackTime,
          (currentdown(x)@((i+1-maxAttackTime+maxHoldTime)))*(((i+1)/maxAttackTime):attackShaper),_: min
@@ -130,7 +130,7 @@ SMOOTH(a, r,  x) =
     /*delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
     /*};*/
 
-rateLimiter(baserelease,prevx,x) = (prevx+newtangent):min(0)
+rateLimiter(baserelease,prevx,x) = ((prevx+newtangent):min(0)),avgLevel
 with {
     newtangent  = select2(tangent>0,minus,plus);
     tangent     = x- prevx;
@@ -173,7 +173,7 @@ with {
 time_ratio_target_atk = 8.0;
 time_ratio_attack(t) = exp(1) / ( t * SR * time_ratio_target_atk );
 
-rateLimit = ( rateLimiter(baserelease) ~ _ );
+rateLimit = ( rateLimiter(baserelease) ~ (_,!):(_,_));
 
 releaseMult      = (hslider("[3]releaseMult[tooltip: ]", 1 , 0, 10 , 0.001)*100);
 releasePower     = (hslider("[4]releasePower[tooltip: ]", 1, 0, 5 , 0.001));
@@ -183,7 +183,7 @@ linearXfade(x,a,b) = a*(1-x),b*x : +;
 
 limiter(x) = (Lookahead(x):releaseEnv(minRelease))~_+(offset@maxHoldTime):meter:db2linear *x@maxHoldTime;
 
-gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit)~_;
+gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit)~(_,_):(_,!);
 //gainComputer(x) = (Lookahead(x):releaseEnv(minRelease)<:(_,rateLimit):linearXfade((link*-1)+1))~_<:(_,rateLimit):linearXfade(link);
 //gainComputer(x) = (Lookahead(x)<:(releaseEnv(minRelease),rateLimit):linearXfade(link))~_;
 //gainComputer(x) = (Lookahead(x):releaseEnv(minRelease))~_;

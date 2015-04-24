@@ -53,6 +53,9 @@ knob_group1(x)   = main_group(vgroup("[0] distortion control [tooltip: this sect
   time_ratio_target_rel =  knob_group1(hslider("[5]release shape", 1, 0.5, 5.0, 0.001));
   // hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
   link  = knob_group1(hslider("[6]stereo link[tooltip: 0 means independent, 1 fully linked]", 1, 0, 1 , 0.001));
+  dynHold =  knob_group1(hslider("[7]dynHold[tooltip:]", 0, 0, 100 , 0.1))*100;
+  dynHoldPow =  knob_group1(hslider("[8]dynHoldPow[tooltip:]", 0, 0, 100 , 0.1));
+  dynHoldDiv =  knob_group1(hslider("[9]dynHoldDiv[tooltip:]", 0, 0, 100 , 0.1));
 
 knob_group2(x)   = main_group(vgroup("[1] musical release [tooltip: this section fine tunes the release to sound musical]", x));
   baserelease   = knob_group2(hslider("[0]base release rate[unit:dB/s][tooltip: release rate when the GR is at AVG, in dB/s]", 15, 0.1, 60 , 0.1)/SampleRate);
