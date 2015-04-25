@@ -35,7 +35,7 @@ maxHoldTime = maxWinSize*nrWin*2;//4096; // = 92ms
 maxWinSize = int(32*SampleRate/44100);
 nrWin = 128;
 //with maxHoldTime = 1024, having maxAttackTime = 512 uses more cpu then maxAttackTime = 1024
-maxAttackTime = int(24*SampleRate/44100):min(maxHoldTime);
+maxAttackTime = int(1024*SampleRate/44100):min(maxHoldTime);
 
 //rmsMaxSize = 1024:min(maxHoldTime);
 rmsMaxSize = int(512*SampleRate/44100):min(maxHoldTime);
@@ -76,7 +76,37 @@ mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]",
 //process = naiveStereoLimiter;
 //process = ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min ));
 //process = simpleStereoLimiter;
+//process = slidemax(5,8);
 process = minimalStereoLimiter;
+
+/*process(x) =*/
+       /*0: seq(i,maxAttackTime,*/
+         /*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*/
+         /**(((i+1)/maxAttackTime))*/
+           /*,_: min*/
+       /*);*/
+/*process =*/
+/*(0,_):seq(i,maxAttackTime,*/
+  /*(*/
+    /*(_,*/
+      /*(*/
+         /*((_')<:(_,_)):*/
+         /*(*/
+          /*(_ *(((i+1)/maxAttackTime)))*/
+          /*,_*/
+         /*)*/
+      /*)*/
+    /*)*/
+    /*:min,_*/
+  /*)*/
+/*) ;*/
+
+/*process(x) =   pmin(currentdown(x),0,4)*/
+    /*with {*/
+      /*pmin(del,mini,1) =del', ((del *((maxAttackTime/maxAttackTime))) ,mini : min);*/
+      /*pmin(del,mini,k) = del,(((pmin(del@(1),mini,(k-1))):(_*(((maxAttackTime-k+1)/maxAttackTime))),_) : (min));*/
+    /*};*/
+
 //process =avgMeter(offset);
 //process = stereoLimiter;
  //process(x)= rdtable(maxAttackTime, (5)  ,int(x*maxAttackTime));

@@ -66,7 +66,7 @@ slidemax(k,w) = smax(w) : pmax(k,w)
   };
 
 Lookahead(x,lastdown,avgLevel) =
-attackGR,
+attackGRYann,
 Yann_hold
 :min
 with {
@@ -78,9 +78,29 @@ with {
        (((i+1)>(maxHoldTime-holdTime))*(currentdown(x)@(i):max(lastdown))),_: min 
       );
     Yann_hold=  slidemin(nrWin,(holdTime/(1+(((avgLevel-lastdown)/dynHoldDiv):pow(dynHoldPow):max(0)*dynHold*dynHoldDiv):min(10))),currentdown(x)) : max(lastdown);
+    /*attackGRYann = currentdown(x)<:pmin(maxAttackTime)*/
+    /*with {*/
+      /*pmin(del,mini,1) = del <: @(1), (mini         ,(@(1)*((1/maxAttackTime):attackShaper)) : min);*/
+      /*pmin(del,mini,k) = del <: @(1), (del,mini:pmin(k-1) ,(@(1)*((k/maxAttackTime):attackShaper))  : min);*/
+    /*};*/
+    attackGRYann =
+(0,currentdown(x)@(maxHoldTime-maxAttackTime)):seq(i,maxAttackTime,
+  (
+    (_,
+      (
+         ((_')<:(_,_)):
+         (
+          (_ *(((i+1)/maxAttackTime):attackShaper))
+          ,_
+         )
+      )
+    )
+    :min,_
+  )
+):(_,!);
     attackGR =
        0: seq(i,maxAttackTime,
-         (currentdown(x)@((i+1-maxAttackTime+maxHoldTime)))*(((i+1)/maxAttackTime):attackShaper),_: min
+         (currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*(((i+1)/maxAttackTime):attackShaper),_: min
        );
       // in theory, attackGRrelative  should give lower distortion, since the gain curve is smooth.
       // neither my ear nor measurements confirm this.
