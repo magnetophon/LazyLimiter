@@ -33,7 +33,9 @@ maxHoldTime = maxWinSize*nrWin*2;//4096; // = 92ms
 //maxHoldTime = 4096; // = 92ms
 //maxHoldTime = 8192; // = 186ms
 maxWinSize = int(32*SampleRate/44100);
+//maxWinSize = int(32*SampleRate/44100);
 nrWin = 128;
+//nrWin = 128;
 //with maxHoldTime = 1024, having maxAttackTime = 512 uses more cpu then maxAttackTime = 1024
 maxAttackTime = int(1024*SampleRate/44100):min(maxHoldTime);
 
@@ -53,7 +55,7 @@ knob_group1(x)   = main_group(vgroup("[0] distortion control [tooltip: this sect
   time_ratio_target_rel =  knob_group1(hslider("[5]release shape", 1, 0.5, 5.0, 0.001));
   // hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
   link  = knob_group1(hslider("[6]stereo link[tooltip: 0 means independent, 1 fully linked]", 1, 0, 1 , 0.001));
-  dynHold =  knob_group1(hslider("[7]dynHold[tooltip:]", 0, 0, 100 , 0.1))*100;
+  dynHold =  knob_group1(hslider("[7]dynHold[tooltip:]", 0, 0, 1 , 0.001))*20;
   dynHoldPow =  knob_group1(hslider("[8]dynHoldPow[tooltip:]", 0, 0, 100 , 0.1));
   dynHoldDiv =  knob_group1(hslider("[9]dynHoldDiv[tooltip:]", 0, 0, 100 , 0.1));
 
@@ -75,9 +77,12 @@ mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]",
 //process = limiter ,limiter;
 //process = naiveStereoLimiter;
 //process = ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min ));
-//process = simpleStereoLimiter;
+//process(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y):releaseEnv(minRelease))):min)~(+(offset@maxHoldTime)):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+
+//(((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y):releaseEnv(minRelease))):min)~(_<:(_,_))+(offset@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+//simpleStereoLimiter;
 //process = slidemax(5,8);
-process = minimalStereoLimiter;
+//process = minimalStereoLimiter;
 
 /*process(x) =*/
        /*0: seq(i,maxAttackTime,*/
@@ -108,7 +113,37 @@ process = minimalStereoLimiter;
     /*};*/
 
 //process =avgMeter(offset);
-//process = stereoLimiter;
+//process(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~(cross(2));
+//(stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((_,_ <: !,_,_,!),_)
+process = stereoLimiter;
+//Lookahead(x,lastdown,avgLevel) =
+
+
+//(((_,(_,((_,_):Lookahead(y)):min)):linearXfade(link)):releaseEnv(minRelease):rateLimit);
+
+//(((_,(_<:_,_)):(Lookahead(x)<:_,_),(_<:_,_)):interleave(2,2));
+
+//(((_,(_,Lookahead(y,prevy,avgLevely):min)):linearXfade(link)):releaseEnv(minRelease):rateLimit);
+
+//GOOD:
+//process(x,y,prevy) =
+  /*(*/
+    /*(((_,(_,((prevy,_):Lookahead(y)):min)):linearXfade(link)):releaseEnv(minRelease):(rateLimit))*/
+    /*~(((_<:(_,_)),_):((cross(2):Lookahead(x)<:_,_),_))*/
+  /*):(_,!);*/
+
+
+/*(*/
+    /*(((_,(_,(prevy:Lookahead(y,_)):min)):linearXfade(link)):releaseEnv(minRelease):rateLimit)*/
+    /*~((Lookahead(x)<:_,_),_)*/
+  /*);*/
+
+
+  /*(*/
+    /*(((_,(_,((prevy:Lookahead(y),_):(_,!)):min)):linearXfade(link)):releaseEnv(minRelease):rateLimit)*/
+    /*~((Lookahead(x)<:_,_),_):(_,!)*/
+  /*);*/
+
  //process(x)= rdtable(maxAttackTime, (5)  ,int(x*maxAttackTime));
  //process(x)= rdtable(int(maxAttackTime), tanh((6/maxAttackTime):pow(1:attackScale)),int(x*maxAttackTime));
  /*process(x)= rdtable(maxAttackTime, ( tanh((6/maxAttackTime):pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1)),int(x*maxAttackTime))*/

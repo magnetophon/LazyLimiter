@@ -84,20 +84,20 @@ with {
       /*pmin(del,mini,k) = del <: @(1), (del,mini:pmin(k-1) ,(@(1)*((k/maxAttackTime):attackShaper))  : min);*/
     /*};*/
     attackGRYann =
-(0,currentdown(x)@(maxHoldTime-maxAttackTime)):seq(i,maxAttackTime,
-  (
-    (_,
-      (
-         ((_')<:(_,_)):
-         (
-          (_ *(((i+1)/maxAttackTime):attackShaper))
-          ,_
-         )
-      )
-    )
-    :min,_
-  )
-):(_,!);
+      (0,currentdown(x)@(maxHoldTime-maxAttackTime)):seq(i,maxAttackTime,
+        (
+          (_,
+            (
+               ((_')<:(_,_)):
+               (
+                (_ *(((i+1)/maxAttackTime):attackShaper))
+                ,_
+               )
+            )
+          )
+          :min,_
+        )
+      ):(_,!);
     attackGR =
        0: seq(i,maxAttackTime,
          (currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*(((i+1)/maxAttackTime):attackShaper),_: min
@@ -106,7 +106,7 @@ with {
       // neither my ear nor measurements confirm this.
       // the non-relative version tkes much less CPU, so can work with a much longer attack-time,
       // which does lower distorion (at least for linear attack)
-      //odly enough, with minimalStereoLimiter, the both variants use about the same amount of CPU
+      // oddly enough, with minimalStereoLimiter, the both variants use about the same amount of CPU
     attackGRrelative =
        0: seq(i,maxAttackTime,
          ((currentdown(x)@(i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
@@ -210,15 +210,22 @@ gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit)~(_,_):(_,!);
 
 stereoGainComputerHalf (x,y,prevy) =
   (
-    (((_,(_,(prevy:Lookahead(y)):min)):linearXfade(link)):releaseEnv(minRelease):rateLimit)
-    ~(Lookahead(x)<:_,_)
-  );
+    (((_,(_,((prevy,_):Lookahead(y)):min)):linearXfade(link)):releaseEnv(minRelease):(rateLimit))
+    ~(cross(2):((_<:(_,_)),_):(((_,cross(2)):(Lookahead(x)<:_,_),_)))
+  ):(_,!);
 
-stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~(_,_ <: !,_,_,!);
+  /*(*/
+    /*(((_,(_,((prevy:Lookahead(y),_):(_,!)):min)):linearXfade(link)):releaseEnv(minRelease):rateLimit)*/
+    /*~((Lookahead(x)<:_,_),_):(_,!)*/
+  /*);*/
+
+           stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~(cross(2));
+           
+      //(stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((_,_ <: !,_,_,!),_);
 
 
 
-stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((_+(offset@maxHoldTime):meter:db2linear)*x@maxHoldTime,((_+(offset@maxHoldTime):meter:db2linear)*y@maxHoldTime)));
+stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((meter:_+(offset@maxHoldTime):db2linear)*x@maxHoldTime,((meter:_+(offset@maxHoldTime):db2linear)*y@maxHoldTime)));
 
 //faust2jaqt -t 999999 -time -sch -vs 4096 -mcd 8192 LookaheadLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
