@@ -208,20 +208,19 @@ gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit)~(_,_):(_,!);
 //gainComputer(x) = (Lookahead(x)<:(releaseEnv(minRelease),rateLimit):linearXfade(link))~_;
 //gainComputer(x) = (Lookahead(x):releaseEnv(minRelease))~_;
 
-stereoGainComputerHalf (x,y,prevy) =
+stereoGainComputerHalf (x,y,prevy,avgLevely) =
   (
-    (((_,(_,((prevy,_):Lookahead(y)):min)):linearXfade(link)):releaseEnv(minRelease):(rateLimit))
-    ~(cross(2):((_<:(_,_)),_):(((_,cross(2)):(Lookahead(x)<:_,_),_)))
-  ):(_,!);
+    ((Lookahead(x)<:_,_):((_,(_,((prevy,avgLevely):Lookahead(y)):min)):linearXfade(link)):releaseEnv(minRelease):(rateLimit))
+    ~(bus(2))
+  );
 
   /*(*/
     /*(((_,(_,((prevy:Lookahead(y),_):(_,!)):min)):linearXfade(link)):releaseEnv(minRelease):rateLimit)*/
     /*~((Lookahead(x)<:_,_),_):(_,!)*/
   /*);*/
 
-           stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~(cross(2));
-           
-      //(stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((_,_ <: !,_,_,!),_);
+stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((cross(2),cross(2)):cross(4)):(_,!,_,!);
+//(stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((_,_ <: !,_,_,!),_);
 
 
 

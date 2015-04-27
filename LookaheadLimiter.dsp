@@ -74,7 +74,7 @@ knob_group2(x)   = main_group(vgroup("[1] musical release [tooltip: this section
 
 
 mymeter    = meter_group(_<:(_, ( (vbargraph("[2]SD[tooltip: slow down amount]", 0, 0.5)))):attach);
-//process = limiter ,limiter;
+//process = stereoGainComputer;
 //process = naiveStereoLimiter;
 //process = ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min ));
 //process(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y):releaseEnv(minRelease))):min)~(+(offset@maxHoldTime)):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
