@@ -2,7 +2,6 @@
 ## FAUST
 #################
 
-*.svg
 *.cpp
 *.tmp.cpp
 *.tmp.dsp
@@ -12,3 +11,4 @@
 *.2.temp-svg
 *.*~
 LookaheadLimiter
+LookaheadLimiter-svg

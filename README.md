@@ -1,7 +1,7 @@
 LookaheadLimiter
 ================
 
-A clean yet fast lookahead limiter written in faust.
+A clean yet fast lookahead limiter written in Faust.
 
 It uses somewhat of a 'brute force' algorithm , so it's quite CPU-hungry.
 
@@ -23,35 +23,61 @@ The cost is heavy CPU usage, and a lot of latency (23 ms by default)
 Usage:
 ------
 
-###threshold
-
-The maximum output level.
-
-###attack shape
-
-0 gives a linear attack, 1 a strongly exponential one.
+## distortion control
+this section controls the amount of distortion, versus the amount of GR
+### input gain
+input gain in dB 
+### threshold
+maximum output level in dB
+### attack shape
+0 gives a linear attack (slow), 1 a strongly exponential one (fast)
+this is how the curve of the attack varies it's shape:
 ![](https://github.com/magnetophon/LookaheadLimiter/blob/master/attack.gif)
+### minimum release time
+minimum time in ms for the GR to go up
+### stereo link
+0 means independent, 1 fully linked
 
-###hold time
+## dynamic hold
+the GR will not go up if it has to be back here within the hold time
+### maximum hold time
+maximum hold time in ms
+### minimum hold time
+minimum hold time in ms
+### dynHold
+shorten the hold time when the GR is below AVG
+### dynHoldPow
+shape the curve of the hold time
+### dynHoldDiv
+scale the curve of the hold time
 
-The release phase is not started if any of the samples within the hold time needs more gain reduction then we currently have.
+##  musical release
+this section fine tunes the release to sound musical
+### base release rate
+release rate when the GR is at AVG, in dB/s
+### transient speed
+speed up the release when the GR is below AVG 
+### anti pump
+slow down the release when the GR is above AVG 
+###  AVG attack 
+time in ms for the AVG to go down 
+###  AVG release 
+time in ms for the AVG to go up
 
-###release time
-
-Time constant in ms (1/e smoothing time) for the compression gain to approach (exponentially) a new higher target level (the compression 'releasing')
-
-###release shape
-
-0.2 is a fast release shape, 5 is slow.
-
+## metering section:
+### gain reduction in dB
+### average gain reduction in dB
+### hold time in ms
 
 Inner workings:
 ---------------
+As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.
 
-There are 3 blocks doing the work: attackGR, hold and releaseEnv.
+In this block-diagram, the lookahead time has been set to 4 samples, and it's a simplified implementation.
+The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
 
-If you want to look at the block-diagram, I recommend changing maxHoldTime to a low value, otherwise you get huge block-diagrams for LookaheadSeq and LookaheadPar.
-In the examples below I've chosen 4; by default, it is 1024 (23 ms).
+Inside the gain computer, there are 3 blocks doing the work: attackGR, hold and releaseEnv.
+
 
 ###attackGR
 
@@ -84,11 +110,16 @@ Hold works as follows:
 We take the minimum of attack and hold, and enter it into the release function, which is just a 0 attack, logarithmic release envelope follower.
 This is the signal that is multiplied with the delayed audio, as mentioned in the explanation of attack.
 
-###further details
+## further details
 
 You can choose the maximum attack and hold time at compile time by changing maxAttackTime and maxHoldTime respectively.
 I've made the shape of the attack curve variable, by putting a wave-shaping function called attackShaper after the "1/4 trough 4/4" of the attack example.
 I've also made the hold time variable at run time.
 
+## Thanks
+I got a lot of [inspiration](https://github.com/sampov2/foo-plugins/blob/master/src/faust-source/compressor-basics.dsp#L126-L139) from Sampo Savolainens [foo-plugins](https://github.com/sampov2/foo-plugins).
 
-This algorithm only starts working properly when using big predelays: ideally maxAttackTime = 1024 and maxHoldTime = 1024 up to 4096.
+My first implementation was a lot like the blockdiagram in the explantion; at usable predelay values it ate CPU's for breakfast.
+[Yann Orlarey](http://www.grame.fr/qui-sommes-nous/compositeurs-associes/yann-orlarey) provided the brainpower to replace the cpu-power and made this thing actually usable!
+
+Many thanks, also to the rest of the Faust team!
