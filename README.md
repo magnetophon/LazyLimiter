@@ -70,9 +70,10 @@ time in ms for the AVG to go up
 #Inner workings
 
 ## conceptual idea
-In this block-diagram, the lookahead time has been set to 4 samples, and it's a simplified implementation.
+Here is [a block-diagram](https://github.com/magnetophon/LookaheadLimiter/blob/master/docs/blockDiagram-svg/process.svg) to help explain.
+Unfortunately GitHub does not enable you to click trough it online, so you'll have to use a downloaded version for that.
+In this example, the lookahead time has been set to 4 samples, and it's a simplified implementation.
 The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
-![](https://github.com/magnetophon/LookaheadLimiter/blob/master/docs/blockDiagram-svg/process.svg)
 As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.
 
 Notice that all values inside GainCalculator are in dB:
