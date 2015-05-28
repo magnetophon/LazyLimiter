@@ -1,8 +1,8 @@
 LazyLimiter
 ================
+Do just enough, no more, no less.
 
 A clean yet fast lookahead limiter written in Faust.
-
 It uses somewhat of a 'brute force' algorithm , so it's quite CPU-hungry.
 
 #features
