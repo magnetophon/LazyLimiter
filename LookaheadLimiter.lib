@@ -14,7 +14,7 @@
 
 declare name      "LookAheadLimiter";
 declare author    "Bart Brouns";
-declare version   "0.1";
+declare version   "0.3";
 declare copyright "(C) 2014 Bart Brouns";
 
 import ("music.lib");  //for linear2db

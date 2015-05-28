@@ -14,7 +14,7 @@
 
 declare name      "LookAheadLimiter";
 declare author    "Bart Brouns";
-declare version   "0.2";
+declare version   "0.3";
 declare copyright "(C) 2014 Bart Brouns";
 
 import ("LookaheadLimiter.lib");
@@ -44,12 +44,12 @@ rmsMaxSize = int(512*SampleRate/44100):min(maxHoldTime);
 
 main_group(x) = (hgroup("[1]", x));
 
-distKnobGroup(x)        = main_group(vgroup("[0]distortion control [tooltip: this section controls the amount of distortion, versus the amount of GR]", x));
-  inGain                = distKnobGroup(hslider("[0]input gain [unit:dB]   [tooltip:  ", 0, 0, 30, 0.1)) ;
-  threshold             = distKnobGroup(hslider("[1]threshold [unit:dB]   [tooltip: maximum output level in dB]", -0.5, -60, 0, 0.1));
-  attack                = distKnobGroup(hslider("[2]attack shape[tooltip: 0 gives a linear attack (slow), 1 a strongly exponential one (fast)]", 1 , 0, 1 , 0.001));
+distKnobGroup(x)          = main_group(vgroup("[0]distortion control [tooltip: this section controls the amount of distortion, versus the amount of GR]", x));
+  inGain                  = distKnobGroup(hslider("[0]input gain [unit:dB]   [tooltip: input gain in dB ", 0, 0, 30, 0.1)) ;
+  threshold               = distKnobGroup(hslider("[1]threshold [unit:dB]   [tooltip: maximum output level in dB]", -0.5, -60, 0, 0.1));
+  attack                  = distKnobGroup(hslider("[2]attack shape[tooltip: 0 gives a linear attack (slow), 1 a strongly exponential one (fast)]", 1 , 0, 1 , 0.001));
 //  release               = distKnobGroup(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 10, 6, 500 , 1)/SampleRate);
-  minRelease            = distKnobGroup(hslider("[3]minimum release time[unit:ms]   [tooltip: minimum time in ms for the GR to go up]",30, 0.1, 500, 0.1)/1000):time_ratio_release;
+  minRelease              = distKnobGroup(hslider("[3]minimum release time[unit:ms]   [tooltip: minimum time in ms for the GR to go up]",30, 0.1, 500, 0.1)/1000):time_ratio_release;
 //  time_ratio_target_rel = distKnobGroup(hslider("[4]release shape", 1, 0.5, 5.0, 0.001));
   // hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
   link              = distKnobGroup(hslider("[5]stereo link[tooltip: 0 means independent, 1 fully linked]", 1, 0, 1 , 0.001));
