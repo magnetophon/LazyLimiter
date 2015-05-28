@@ -10,7 +10,7 @@ It uses somewhat of a 'brute force' algorithm , so it's quite CPU-hungry.
 * brick-wall limiter
 * starts fading down before each peak
  * fade down can be anything between linear, and strongly exponential
- * linear sounds cleaner, exponential punchier/louder
+ *
 * will not start fading up if we need to be down at least the same amount soon
 * elaborate auto release algorithm allows you to set a musical trade-off between clean and loud
 
@@ -22,22 +22,28 @@ The cost is heavy CPU usage, and a lot of latency (186 ms by default)
 #usage:
 
 ## distortion control
-this section controls the amount of distortion, versus the amount of GR
+This section controls the amount of distortion, versus the amount of gain reduction.
+It can provide gain reduction completely without distortion, but still react quick to transients.
+Set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0, to hear this effect.
+While very clean, this sound has two problems:
+1. It can be a bit too conservative. The dynamic hold section can fix that.
+2. At the same time it can be a bit too quick to release in quiet parts. The musical release section fixes that.
 ### input gain
-input gain in dB 
+Input gain in dB 
 ### threshold
 maximum output level in dB
 ### attack shape
-0 gives a linear attack (slow), 1 a strongly exponential one (fast)
-this is how the curve of the attack varies it's shape:
+0 gives a linear attack (slow), 1 a strongly exponential one (fast).
+Linear sounds cleaner, exponential punchier/louder.
+This is how the curve of the attack varies it's shape:
 ![](https://github.com/magnetophon/LazyLimiter/blob/master/docs/attack.gif)
 ### minimum release time
-minimum time in ms for the GR to go up
+Minimum time in ms for the GR to go up
 ### stereo link
 0 means independent, 1 fully linked
 
 ## dynamic hold
-the GR will not go up if it has to be back here within the hold time
+The GR will not go up if it has to be back here within the hold time.
 ### maximum hold time
 maximum hold time in ms
 ### minimum hold time
