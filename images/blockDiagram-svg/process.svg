@@ -9,19 +9,19 @@
 <circle cx="34.000000" cy="68.000000" r="1"/>
 <line x1="29.000000" y1="77.000000" x2="32.000000" y2="78.000000"  transform="rotate(0.000000,32.000000,78.000000)" style="stroke: black; stroke-width:0.25;"/>
 <line x1="29.000000" y1="79.000000" x2="32.000000" y2="78.000000"  transform="rotate(0.000000,32.000000,78.000000)" style="stroke: black; stroke-width:0.25;"/>
-<a xlink:href="GainCalculator-0x94330d0.svg">
+<a xlink:href="GainCalculator-0x9a09128.svg">
 <rect x="66.800000" y="67.000000" width="77.400000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="65.800000" y="66.000000" width="77.400000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#003366;"/>
 </a>
-<a xlink:href="GainCalculator-0x94330d0.svg">
+<a xlink:href="GainCalculator-0x9a09128.svg">
 <text x="104.500000" y="80.000000" font-family="Arial" font-size="7" text-anchor="middle" fill="#FFFFFF">GainCalculator(x1)</text>
 </a>
 <circle cx="67.800000" cy="68.000000" r="1"/>
-<a xlink:href="db2linear-0x94373b8.svg">
+<a xlink:href="db2linear-0x9a0d410.svg">
 <rect x="182.850000" y="25.000000" width="38.700000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="181.850000" y="24.000000" width="38.700000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#003366;"/>
 </a>
-<a xlink:href="db2linear-0x94373b8.svg">
+<a xlink:href="db2linear-0x9a0d410.svg">
 <text x="201.200000" y="38.000000" font-family="Arial" font-size="7" text-anchor="middle" fill="#FFFFFF">db2linear</text>
 </a>
 <circle cx="183.850000" cy="26.000000" r="1"/>
