@@ -5,23 +5,22 @@ A clean yet fast lookahead limiter written in Faust.
 
 It uses somewhat of a 'brute force' algorithm , so it's quite CPU-hungry.
 
-###features
+#features
 
 * brick-wall limiter
 * starts fading down before each peak
 * fade down can be anything between linear, and strongly exponential
+
   linear sounds cleaner, exponential punchier/louder
 * will not start fading up if we need to be down at least the same amount soon
-* the release allows for the usual trade-off between clean and loud
-
+* elaborate auto release algorithm allows you to set a musical trade-off between clean and loud
 
 In combination, these features provide the holy grail of limiters: fast reaction on peaks, yet hardly any distortion on sustained material.
 Sine waves even have zero distortion down to the very low bass, at any level.
 
-The cost is heavy CPU usage, and a lot of latency (23 ms by default)
+The cost is heavy CPU usage, and a lot of latency (186 ms by default)
 
-Usage:
-------
+#usage:
 
 ## distortion control
 this section controls the amount of distortion, versus the amount of GR
@@ -69,17 +68,26 @@ time in ms for the AVG to go up
 ### average gain reduction in dB
 ### hold time in ms
 
-Inner workings:
----------------
-As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.
+#Inner workings
 
+## conceptual idea
 In this block-diagram, the lookahead time has been set to 4 samples, and it's a simplified implementation.
 The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
+![](https://github.com/magnetophon/LookaheadLimiter/blob/master/docs/blockDiagram-svg/process.svg)
+As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.
 
-Inside the gain computer, there are 3 blocks doing the work: attackGR, hold and releaseEnv.
 
+Notice that all values inside GainCalculator are in dB:
+0dB meaning no gain reduction, and -infinate meaning full gain reduction; silence, and 
+In other words, the smaller the value, the more gain reduction.
 
-###attackGR
+Inside the GainCalculator, there are 3 blocks doing the work: attackGainReduction, hold and releaseEnvelope.
+1. attackGainReduction calculates gradual fade down towards the eventual gain reduction.
+2. hold makes sure we don't fade back up if we need to be down at least the same amount soon.
+Together they make up minimumGainReduction.
+3. this goes into releaseEnvelope, to tweak the release to be musical.
+
+###attackGainReduction
 
 The attack is calculated as follows:
 -currentdown represents the amount of decibels we need to go down for the current input sample to stay below the threshold.
@@ -90,7 +98,7 @@ The attack is calculated as follows:
     currentdown@4*(4/4)
 -we take the minimum value of this array
 -eventually, we do:
-attackGR_with_hold_and_releaseEnv:db2linear*audio@4;
+attackGainReduction_with_hold_and_releaseEnvelope:db2linear*audio@4;
 In effect, we have created at linear (in dB) fade-down with a duration of 4 samples, with the loudest sample ending up at exactly the threshold.
 
 ###hold
@@ -105,21 +113,26 @@ Hold works as follows:
 -again we take the minimum of these values.
 -in plain English: we check if any of the coming samples needs the same or more gain reduction then we currently have, and if so, we stay down.
 
-###releaseEnv
+###releaseEnvelope
 
 We take the minimum of attack and hold, and enter it into the release function, which is just a 0 attack, logarithmic release envelope follower.
 This is the signal that is multiplied with the delayed audio, as mentioned in the explanation of attack.
 
-## further details
+## actual implementation:
 
-You can choose the maximum attack and hold time at compile time by changing maxAttackTime and maxHoldTime respectively.
-I've made the shape of the attack curve variable, by putting a wave-shaping function called attackShaper after the "1/4 trough 4/4" of the attack example.
-I've also made the hold time variable at run time.
+You can choose the maximum attack and hold time at compile time by changing [maxAttackTime](https://github.com/magnetophon/LookaheadLimiter/blob/master/GUI.lib#L38) and [maxHoldTime](https://github.com/magnetophon/LookaheadLimiter/blob/master/GUI.lib#L30).
+This way various comromises between quality and CPU usage can be made.
+They are scaled with samplerate, but you have to [manually set it](https://github.com/magnetophon/LookaheadLimiter/blob/master/GUI.lib#L21) at compile time.
 
-## Thanks
+I've made the shape of the attack curve variable, by putting a wave-shaping function after the "1/4 trough 4/4" of the attack example.
+Both the hold time and the time of the releaseEnvelope can automatically adapt to the input material.
+
+I am looking for ways to reduce the amount of parameters, either by choosing good defaults or by inteligently coupling them.
+
+# Thanks
 I got a lot of [inspiration](https://github.com/sampov2/foo-plugins/blob/master/src/faust-source/compressor-basics.dsp#L126-L139) from Sampo Savolainens [foo-plugins](https://github.com/sampov2/foo-plugins).
 
 My first implementation was a lot like the blockdiagram in the explantion; at usable predelay values it ate CPU's for breakfast.
-[Yann Orlarey](http://www.grame.fr/qui-sommes-nous/compositeurs-associes/yann-orlarey) provided the brainpower to replace the cpu-power and made this thing actually usable!
+[Yann Orlarey](http://www.grame.fr/qui-sommes-nous/compositeurs-associes/yann-orlarey) provided [the brainpower to replace the cpu-power](https://github.com/magnetophon/LookaheadLimiter/blob/master/LookaheadLimiter.lib#L54-L66) and made this thing actually usable!
 
 Many thanks, also to the rest of the Faust team!
