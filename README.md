@@ -10,9 +10,8 @@ It uses somewhat of a 'brute force' algorithm , so it's quite CPU-hungry.
 * brick-wall limiter
 * starts fading down before each peak
  * fade down can be anything between linear, and strongly exponential
- *
-* will not start fading up if we need to be down at least the same amount soon
-* elaborate auto release algorithm allows you to set a musical trade-off between clean and loud
+* will not start fading up if it needs to be down at least the same amount soon
+* the elaborate auto release algorithm allows you to set a musical trade-off between clean and loud
 
 In combination, these features provide the holy grail of limiters: fast reaction on peaks, yet hardly any distortion on sustained material.
 Sine waves even have zero distortion down to the very low bass, at any level.
@@ -23,11 +22,11 @@ The cost is heavy CPU usage, and a lot of latency (186 ms by default)
 
 ## distortion control
 This section controls the amount of distortion, versus the amount of gain reduction.
-It can provide gain reduction completely without distortion, but still react quick to transients.
+It can provide gain reduction completely without distorting, yet still reacts quick to transients.
 Set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0, to hear this effect.
 While very clean, this sound has two problems:
 1. It can be a bit too conservative. The dynamic hold section can fix that.
-2. At the same time it can be a bit too quick to release in quiet parts. The musical release section fixes that.
+2. Simultaneously, it releases to quick in quiet parts. The musical release section fixes that.
 ### input gain
 Input gain in dB 
 ### threshold
@@ -102,7 +101,7 @@ The attack is calculated as follows:
     currentdown@3*(3/4)
     currentdown@4*(4/4)
 -we take the minimum value of this array
-In effect, we have created at linear (in dB) fade-down with a duration of 4 samples, with the loudest sample ending up at exactly the threshold.
+In effect, we have created a constantly moving linear fade-down with a duration of 4 samples.
 
 ###hold
 
