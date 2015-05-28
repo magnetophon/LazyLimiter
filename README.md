@@ -63,9 +63,9 @@ time in ms for the AVG to go down
 time in ms for the AVG to go up
 
 ## metering section:
-gain reduction in dB
-average gain reduction in dB
-hold time in ms
+- gain reduction in dB
+- average gain reduction in dB
+- hold time in ms
 
 #Inner workings
 
