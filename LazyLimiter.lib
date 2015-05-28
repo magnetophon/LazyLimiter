@@ -12,7 +12,7 @@
 
 /*some building blocks where taken from or inspired by compressor-basics.dsp by Sampo Savolainen*/
 
-declare name      "LookAheadLimiter";
+declare name      "LazyLimiter";
 declare author    "Bart Brouns";
 declare version   "0.3";
 declare copyright "(C) 2014 Bart Brouns";
@@ -229,11 +229,11 @@ stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,
 
 stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((meter:_+(inGain@maxHoldTime):db2linear)*x@maxHoldTime,((meter:_+(inGain@maxHoldTime):db2linear)*y@maxHoldTime)));
 
-//faust2jaqt -t 999999 -time -sch -vs 4096 -mcd 8192 LookaheadLimiter.dsp  485.55s
+//faust2jaqt -t 999999 -time -sch -vs 4096 -mcd 8192 LazyLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
 //jack: 78% CPU
 
-//faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LookaheadLimiter.dsp  485.55s
+//faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LazyLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
 //jack: 80% CPU
 simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y):releaseEnv(minRelease))):min)~(_<:(_,_))+(inGain@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
@@ -241,7 +241,7 @@ simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y)
 //simpleStereoLimiter(x,y) = (LookaheadPar(x),LookaheadPar(y):min:releaseEnv(minRelease))~(_<:(_,_))+(inGain@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 
 
-//faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LookaheadLimiter.dsp
+//faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LazyLimiter.dsp
 //maxHoldTime = 1024 maxAttackTime = 1024
 //jack: 52% CPU  169.49s
 //maxHoldTime = 2048 maxAttackTime = 1024

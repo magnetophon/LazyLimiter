@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 343.200000 296.000000" width="171.600000mm" height="148.000000mm" version="1.1">
-<a xlink:href="minimumGainReduc-0xa5e0fd8.svg">
+<a xlink:href="minimumGainReduc-0x9a08fa0.svg">
 <rect x="1.000000" y="1.000000" width="342.200000" height="295.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="0.000000" y="0.000000" width="342.200000" height="295.000000" rx="0" ry="0" style="stroke:none;fill:#ffffff;"/>
 </a>
 <text x="10.000000" y="7.000000" font-family="Arial" font-size="7"></text>
-<a xlink:href="currentdown-0xa5dfe70.svg">
+<a xlink:href="currentdown-0x9a07e38.svg">
 <rect x="25.000000" y="25.000000" width="64.500000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="24.000000" y="24.000000" width="64.500000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#003366;"/>
 </a>
-<a xlink:href="currentdown-0xa5dfe70.svg">
+<a xlink:href="currentdown-0x9a07e38.svg">
 <text x="56.250000" y="38.000000" font-family="Arial" font-size="7" text-anchor="middle" fill="#FFFFFF">currentdown(x1)</text>
 </a>
 <circle cx="26.000000" cy="26.000000" r="1"/>
@@ -37,11 +37,11 @@
 <line x1="196.200000" y1="49.000000" x2="199.200000" y2="48.000000"  transform="rotate(0.000000,199.200000,48.000000)" style="stroke: black; stroke-width:0.25;"/>
 <line x1="196.200000" y1="55.000000" x2="199.200000" y2="56.000000"  transform="rotate(0.000000,199.200000,56.000000)" style="stroke: black; stroke-width:0.25;"/>
 <line x1="196.200000" y1="57.000000" x2="199.200000" y2="56.000000"  transform="rotate(0.000000,199.200000,56.000000)" style="stroke: black; stroke-width:0.25;"/>
-<a xlink:href="currentdown-0xa5dfe70.svg">
+<a xlink:href="currentdown-0x9a07e38.svg">
 <rect x="25.000000" y="89.000000" width="64.500000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="24.000000" y="88.000000" width="64.500000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#003366;"/>
 </a>
-<a xlink:href="currentdown-0xa5dfe70.svg">
+<a xlink:href="currentdown-0x9a07e38.svg">
 <text x="56.250000" y="102.000000" font-family="Arial" font-size="7" text-anchor="middle" fill="#FFFFFF">currentdown(x1)</text>
 </a>
 <circle cx="26.000000" cy="90.000000" r="1"/>
@@ -69,11 +69,11 @@
 <line x1="196.200000" y1="113.000000" x2="199.200000" y2="112.000000"  transform="rotate(0.000000,199.200000,112.000000)" style="stroke: black; stroke-width:0.25;"/>
 <line x1="196.200000" y1="119.000000" x2="199.200000" y2="120.000000"  transform="rotate(0.000000,199.200000,120.000000)" style="stroke: black; stroke-width:0.25;"/>
 <line x1="196.200000" y1="121.000000" x2="199.200000" y2="120.000000"  transform="rotate(0.000000,199.200000,120.000000)" style="stroke: black; stroke-width:0.25;"/>
-<a xlink:href="currentdown-0xa5dfe70.svg">
+<a xlink:href="currentdown-0x9a07e38.svg">
 <rect x="25.000000" y="153.000000" width="64.500000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="24.000000" y="152.000000" width="64.500000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#003366;"/>
 </a>
-<a xlink:href="currentdown-0xa5dfe70.svg">
+<a xlink:href="currentdown-0x9a07e38.svg">
 <text x="56.250000" y="166.000000" font-family="Arial" font-size="7" text-anchor="middle" fill="#FFFFFF">currentdown(x1)</text>
 </a>
 <circle cx="26.000000" cy="154.000000" r="1"/>
@@ -101,11 +101,11 @@
 <line x1="196.200000" y1="177.000000" x2="199.200000" y2="176.000000"  transform="rotate(0.000000,199.200000,176.000000)" style="stroke: black; stroke-width:0.25;"/>
 <line x1="196.200000" y1="183.000000" x2="199.200000" y2="184.000000"  transform="rotate(0.000000,199.200000,184.000000)" style="stroke: black; stroke-width:0.25;"/>
 <line x1="196.200000" y1="185.000000" x2="199.200000" y2="184.000000"  transform="rotate(0.000000,199.200000,184.000000)" style="stroke: black; stroke-width:0.25;"/>
-<a xlink:href="currentdown-0xa5dfe70.svg">
+<a xlink:href="currentdown-0x9a07e38.svg">
 <rect x="25.000000" y="217.000000" width="64.500000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="24.000000" y="216.000000" width="64.500000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#003366;"/>
 </a>
-<a xlink:href="currentdown-0xa5dfe70.svg">
+<a xlink:href="currentdown-0x9a07e38.svg">
 <text x="56.250000" y="230.000000" font-family="Arial" font-size="7" text-anchor="middle" fill="#FFFFFF">currentdown(x1)</text>
 </a>
 <circle cx="26.000000" cy="218.000000" r="1"/>

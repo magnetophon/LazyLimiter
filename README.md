@@ -1,4 +1,4 @@
-LookaheadLimiter
+LazyLimiter
 ================
 
 A clean yet fast lookahead limiter written in Faust.
@@ -30,7 +30,7 @@ maximum output level in dB
 ### attack shape
 0 gives a linear attack (slow), 1 a strongly exponential one (fast)
 this is how the curve of the attack varies it's shape:
-![](https://github.com/magnetophon/LookaheadLimiter/blob/master/attack.gif)
+![](https://github.com/magnetophon/LazyLimiter/blob/master/docs/attack.gif)
 ### minimum release time
 minimum time in ms for the GR to go up
 ### stereo link
@@ -70,7 +70,7 @@ time in ms for the AVG to go up
 #Inner workings
 
 ## conceptual idea
-Here is [a block-diagram](https://github.com/magnetophon/LookaheadLimiter/blob/master/docs/blockDiagram-svg/process.svg) to help explain.
+Here is [a block-diagram](https://github.com/magnetophon/LazyLimiter/blob/master/docs/blockDiagram-svg/process.svg) to help explain.
 Unfortunately GitHub does not enable you to click trough it online, so you'll have to use a downloaded version for that.
 In this example, the lookahead time has been set to 4 samples, and it's a simplified implementation.
 The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
@@ -117,9 +117,9 @@ This is the signal that is multiplied with the delayed audio, as mentioned in th
 
 ## actual implementation:
 
-You can choose the maximum attack and hold time at compile time by changing [maxAttackTime](https://github.com/magnetophon/LookaheadLimiter/blob/master/GUI.lib#L38) and [maxHoldTime](https://github.com/magnetophon/LookaheadLimiter/blob/master/GUI.lib#L30).
+You can choose the maximum attack and hold time at compile time by changing [maxAttackTime](https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L38) and [maxHoldTime](https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L30).
 This way various comromises between quality and CPU usage can be made.
-They are scaled with samplerate, but you have to [manually set it](https://github.com/magnetophon/LookaheadLimiter/blob/master/GUI.lib#L21) at compile time.
+They are scaled with samplerate, but you have to [manually set it](https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L21) at compile time.
 
 I've made the shape of the attack curve variable, by putting a wave-shaping function after the "1/4 trough 4/4" of the attack example.
 Both the hold time and the time of the releaseEnvelope automatically adapt to the input material.
@@ -130,6 +130,6 @@ I am looking for ways to reduce the amount of parameters, either by choosing goo
 I got a lot of [inspiration](https://github.com/sampov2/foo-plugins/blob/master/src/faust-source/compressor-basics.dsp#L126-L139) from Sampo Savolainens [foo-plugins](https://github.com/sampov2/foo-plugins).
 
 My first implementation was a lot like the blockdiagram in the explantion; at usable predelay values it ate CPU's for breakfast.
-[Yann Orlarey](http://www.grame.fr/qui-sommes-nous/compositeurs-associes/yann-orlarey) provided [the brainpower to replace the cpu-power](https://github.com/magnetophon/LookaheadLimiter/blob/master/LookaheadLimiter.lib#L54-L66) and made this thing actually usable!
+[Yann Orlarey](http://www.grame.fr/qui-sommes-nous/compositeurs-associes/yann-orlarey) provided [the brainpower to replace the cpu-power](https://github.com/magnetophon/LazyLimiter/blob/master/LazyLimiter.lib#L54-L66) and made this thing actually usable!
 
 Many thanks, also to the rest of the Faust team!

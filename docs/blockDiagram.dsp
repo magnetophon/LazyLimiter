@@ -12,7 +12,7 @@
 
 /*some building blocks where taken from or inspired by compressor-basics.dsp by Sampo Savolainen*/
 
-declare name      "LookAheadLimiterBlockDiagram";
+declare name      "LazyLimiterBlockDiagram";
 declare author    "Bart Brouns";
 declare version   "0.3";
 declare copyright "(C) 2014 Bart Brouns";
@@ -20,7 +20,7 @@ declare copyright "(C) 2014 Bart Brouns";
 import ("music.lib");  //for linear2db
 import ("effect.lib");  //for amp_follower
 import ("../GUI.lib");
-import ("../LookaheadLimiter.lib");
+import ("../LazyLimiter.lib");
 
 
 process(audio) = GainCalculator(audio) : db2linear * audio@LookAheadTime;
@@ -28,7 +28,7 @@ process(audio) = GainCalculator(audio) : db2linear * audio@LookAheadTime;
 // just for visual indication in the blockdiagram. you can't actually change it and expect the code to work.
 LookAheadTime = 4;
 
-GainCalculator(audio) = minimumGainReduction(audio)~_ : releaseEnvelope;
+GainCalculator(audio) = (minimumGainReduction(audio) : releaseEnvelope)~_;
 
 // this extra abstraction layer is needed to make the feedback loop work.
 // not so great for educational purposes.

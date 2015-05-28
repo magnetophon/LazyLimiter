@@ -12,13 +12,13 @@
 
 /*some building blocks where taken from or inspired by compressor-basics.dsp by Sampo Savolainen*/
 
-declare name      "LookAheadLimiter";
+declare name      "LazyLimiter";
 declare author    "Bart Brouns";
 declare version   "0.3";
 declare copyright "(C) 2014 Bart Brouns";
 
 import ("GUI.lib");
-import ("LookaheadLimiter.lib");
+import ("LazyLimiter.lib");
 
 //process = stereoGainComputer;
 //process = naiveStereoLimiter;

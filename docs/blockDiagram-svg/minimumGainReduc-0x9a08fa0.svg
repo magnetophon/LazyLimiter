@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 253.900000 104.000000" width="126.950000mm" height="52.000000mm" version="1.1">
-<a xlink:href="GainCalculator-0xa5e10f8.svg">
+<a xlink:href="GainCalculator-0x9a09128.svg">
 <rect x="1.000000" y="1.000000" width="252.900000" height="103.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="0.000000" y="0.000000" width="252.900000" height="103.000000" rx="0" ry="0" style="stroke:none;fill:#ffffff;"/>
 </a>
@@ -11,19 +11,19 @@
 <circle cx="34.000000" cy="42.000000" r="1"/>
 <line x1="29.000000" y1="51.000000" x2="32.000000" y2="52.000000"  transform="rotate(0.000000,32.000000,52.000000)" style="stroke: black; stroke-width:0.25;"/>
 <line x1="29.000000" y1="53.000000" x2="32.000000" y2="52.000000"  transform="rotate(0.000000,32.000000,52.000000)" style="stroke: black; stroke-width:0.25;"/>
-<a xlink:href="attackGainReduct-0xa5e0980.svg">
+<a xlink:href="attackGainReduct-0x9a08948.svg">
 <rect x="79.700000" y="25.000000" width="103.200000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="78.700000" y="24.000000" width="103.200000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#003366;"/>
 </a>
-<a xlink:href="attackGainReduct-0xa5e0980.svg">
+<a xlink:href="attackGainReduct-0x9a08948.svg">
 <text x="130.300000" y="38.000000" font-family="Arial" font-size="7" text-anchor="middle" fill="#FFFFFF">attackGainReduction(x1)</text>
 </a>
 <circle cx="80.700000" cy="26.000000" r="1"/>
-<a xlink:href="hold-0xa5e0e80.svg">
+<a xlink:href="hold-0x9a08e48.svg">
 <rect x="105.500000" y="57.000000" width="51.600000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#cccccc;"/>
 <rect x="104.500000" y="56.000000" width="51.600000" height="24.000000" rx="0" ry="0" style="stroke:none;fill:#003366;"/>
 </a>
-<a xlink:href="hold-0xa5e0e80.svg">
+<a xlink:href="hold-0x9a08e48.svg">
 <text x="130.300000" y="70.000000" font-family="Arial" font-size="7" text-anchor="middle" fill="#FFFFFF">hold(x1)(x2)</text>
 </a>
 <circle cx="106.500000" cy="58.000000" r="1"/>
