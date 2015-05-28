@@ -24,18 +24,18 @@ The cost is heavy CPU usage, and a lot of latency (186 ms by default)
 This section controls the amount of distortion, versus the amount of gain reduction.
 It can provide gain reduction completely without distorting, yet still reacts quick to transients.
 Set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0, to hear this effect.
-While very clean, this sound has two problems:
-1. It can be a bit too conservative. The dynamic hold section can fix that.
-2. Simultaneously, it releases to quick in quiet parts. The musical release section fixes that.
+While very clean, this sound has two problems:  
+1. It can be a bit too conservative. The dynamic hold section can fix that.  
+2. Simultaneously, it releases to quick in quiet parts. The musical release section fixes that.  
 ### input gain
-Input gain in dB 
+Input gain in dB
 ### threshold
 maximum output level in dB
 ### attack shape
 0 gives a linear attack (slow), 1 a strongly exponential one (fast).
-Linear sounds cleaner, exponential punchier/louder.
+Linear sounds cleaner, exponential punchier/louder.  
 This is how the curve of the attack varies it's shape:
-![](https://github.com/magnetophon/LazyLimiter/blob/master/docs/attack.gif)
+![](https://github.com/magnetophon/LazyLimiter/raw/master/docs/attack.gif)
 ### minimum release time
 Minimum time in ms for the GR to go up
 ### stereo link
@@ -59,9 +59,9 @@ this section fine tunes the release to sound musical
 ### base release rate
 release rate when the GR is at AVG, in dB/s
 ### transient speed
-speed up the release when the GR is below AVG 
+speed up the release when the GR is below AVG
 ### anti pump
-slow down the release when the GR is above AVG 
+slow down the release when the GR is above AVG
 ###  AVG attack 
 time in ms for the AVG to go down 
 ###  AVG release 
@@ -75,7 +75,7 @@ time in ms for the AVG to go up
 #Inner workings
 
 ## conceptual idea
-Here is [a block-diagram](https://github.com/magnetophon/LazyLimiter/blob/master/docs/blockDiagram-svg/process.svg) to help explain.
+Here is [a block-diagram](https://github.com/magnetophon/LazyLimiter/raw/master/docs/blockDiagram-svg/process.svg) to help explain.
 Unfortunately GitHub does not enable you to click trough it online, so you'll have to use a downloaded version for that.
 In this example, the lookahead time has been set to 4 samples, and it's a simplified implementation.
 The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
@@ -86,34 +86,34 @@ Notice that all values inside GainCalculator are in dB:
 In other words, the smaller the value, the more gain reduction.
 
 Inside the GainCalculator, there are 3 blocks doing the work: attackGainReduction, hold and releaseEnvelope.
-1. attackGainReduction calculates gradual fade down towards the eventual gain reduction.
-2. hold makes sure we don't fade back up if we need to be down at least the same amount soon.
-Together they make up minimumGainReduction.
-3. this goes into releaseEnvelope, to tweak the release to be musical.
+1. attackGainReduction calculates gradual fade down towards the eventual gain reduction.  
+2. hold makes sure we don't fade back up if we need to be down at least the same amount soon.  
+Together they make up minimumGainReduction.  
+3. this goes into releaseEnvelope, to tweak the release to be musical.  
 
 ###attackGainReduction
 
 The attack is calculated as follows:
--currentdown represents the amount of decibels we need to go down for the current input sample to stay below the threshold.
--we make an array of 4, as follows:
-    currentdown@1*(1/4)
-    currentdown@2*(2/4)
-    currentdown@3*(3/4)
-    currentdown@4*(4/4)
--we take the minimum value of this array
+- currentdown represents the amount of decibels we need to go down for the current input sample to stay below the threshold.
+- we make an array of 4, as follows:  
+    currentdown@1*(1/4)  
+    currentdown@2*(2/4)  
+    currentdown@3*(3/4)  
+    currentdown@4*(4/4)  
+- we take the minimum value of this array
 In effect, we have created a constantly moving linear fade-down with a duration of 4 samples.
 
 ###hold
 
 Hold works as follows:
--lastdown represents the amount of decibels we where down at the previous sample, iow a feedback loop coming from the end of the GainCalculator.
--we make an array of 4, as follows:
-(currentdown@(0):max(lastdown))
-(currentdown@(1):max(lastdown))
-(currentdown@(2):max(lastdown))
-(currentdown@(3):max(lastdown))
--again we take the minimum of these values.
--in plain English: we check if any of the coming samples needs the same or more gain reduction then we currently have, and if so, we stay down.
+- lastdown represents the amount of decibels we where down at the previous sample, iow a feedback loop coming from the end of the GainCalculator.
+- we make an array of 4, as follows:  
+(currentdown@(0):max(lastdown))  
+(currentdown@(1):max(lastdown))  
+(currentdown@(2):max(lastdown))  
+(currentdown@(3):max(lastdown))  
+- again we take the minimum of these values.
+- in plain English: we check if any of the coming samples needs the same or more gain reduction then we currently have, and if so, we stay down.
 
 ###releaseEnvelope
 
