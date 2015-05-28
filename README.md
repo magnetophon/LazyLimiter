@@ -63,9 +63,9 @@ time in ms for the AVG to go down
 time in ms for the AVG to go up
 
 ## metering section:
-### gain reduction in dB
-### average gain reduction in dB
-### hold time in ms
+gain reduction in dB
+average gain reduction in dB
+hold time in ms
 
 #Inner workings
 
@@ -96,14 +96,12 @@ The attack is calculated as follows:
     currentdown@3*(3/4)
     currentdown@4*(4/4)
 -we take the minimum value of this array
--eventually, we do:
-attackGainReduction_with_hold_and_releaseEnvelope:db2linear*audio@4;
 In effect, we have created at linear (in dB) fade-down with a duration of 4 samples, with the loudest sample ending up at exactly the threshold.
 
 ###hold
 
 Hold works as follows:
--lastdown represents the amount of decibels we where down at the previous sample, iow a feedback loop coming from the end of the gain calculater.
+-lastdown represents the amount of decibels we where down at the previous sample, iow a feedback loop coming from the end of the GainCalculator.
 -we make an array of 4, as follows:
 (currentdown@(0):max(lastdown))
 (currentdown@(1):max(lastdown))
@@ -124,7 +122,7 @@ This way various comromises between quality and CPU usage can be made.
 They are scaled with samplerate, but you have to [manually set it](https://github.com/magnetophon/LookaheadLimiter/blob/master/GUI.lib#L21) at compile time.
 
 I've made the shape of the attack curve variable, by putting a wave-shaping function after the "1/4 trough 4/4" of the attack example.
-Both the hold time and the time of the releaseEnvelope can automatically adapt to the input material.
+Both the hold time and the time of the releaseEnvelope automatically adapt to the input material.
 
 I am looking for ways to reduce the amount of parameters, either by choosing good defaults or by inteligently coupling them.
 
