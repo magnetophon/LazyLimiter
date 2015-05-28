@@ -9,9 +9,8 @@ It uses somewhat of a 'brute force' algorithm , so it's quite CPU-hungry.
 
 * brick-wall limiter
 * starts fading down before each peak
-* fade down can be anything between linear, and strongly exponential
-
-  linear sounds cleaner, exponential punchier/louder
+ * fade down can be anything between linear, and strongly exponential
+ * linear sounds cleaner, exponential punchier/louder
 * will not start fading up if we need to be down at least the same amount soon
 * elaborate auto release algorithm allows you to set a musical trade-off between clean and loud
 
@@ -75,7 +74,6 @@ In this block-diagram, the lookahead time has been set to 4 samples, and it's a 
 The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
 ![](https://github.com/magnetophon/LookaheadLimiter/blob/master/docs/blockDiagram-svg/process.svg)
 As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.
-
 
 Notice that all values inside GainCalculator are in dB:
 0dB meaning no gain reduction, and -infinate meaning full gain reduction; silence, and 
