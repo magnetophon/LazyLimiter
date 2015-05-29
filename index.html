@@ -177,9 +177,7 @@ This is how the curve of the attack varies it's shape:
 
 <p>In this example, the lookahead time has been set to 4 samples,the actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.</p>
 
-<p>In this example, the lookahead time has been set to 4 samples, and it's a simplified implementation.
-The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
-As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.</p>
+<p>As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.</p>
 
 <p>Notice that all values inside GainCalculator are in dB:
 0dB meaning no gain reduction, and -infinate meaning full gain reduction; silence, and 
