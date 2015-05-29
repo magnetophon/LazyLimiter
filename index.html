@@ -180,7 +180,7 @@ This is how the curve of the attack varies it's shape:
 <p>As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.</p>
 
 <p>Notice that all values inside GainCalculator are in dB:
-0dB meaning no gain reduction, and -infinate meaning full gain reduction; silence, and 
+0dB meaning no gain reduction, and -infinite meaning full gain reduction; silence, and 
 In other words, the smaller the value, the more gain reduction.</p>
 
 <p>Inside the GainCalculator, there are 3 blocks doing the work: attackGainReduction, hold and releaseEnvelope.<br>
@@ -217,7 +217,7 @@ In effect, we have created a constantly moving linear fade-down with a duration 
 <p>Hold works as follows:</p>
 
 <ul>
-<li>lastdown represents the amount of decibels we where down at the previous sample, iow a feedback loop coming from the end of the GainCalculator.</li>
+<li>lastdown represents the amount of decibels we where down at the previous sample, in other words: a feedback loop coming from the end of the GainCalculator.</li>
 <li>we make an array of 4, as follows:<br>
 </li>
 </ul>
@@ -243,20 +243,20 @@ This is the signal that is multiplied with the delayed audio, as mentioned in th
 <a id="actual-implementation" class="anchor" href="#actual-implementation" aria-hidden="true"><span class="octicon octicon-link"></span></a>actual implementation:</h2>
 
 <p>You can choose the maximum attack and hold time at compile time by changing <a href="https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L38">maxAttackTime</a> and <a href="https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L30">maxHoldTime</a>.
-This way various comromises between quality and CPU usage can be made.
+This way various compromises between quality and CPU usage can be made.
 They are scaled with samplerate, but you have to <a href="https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L21">manually set it</a> at compile time.</p>
 
 <p>I've made the shape of the attack curve variable, by putting a wave-shaping function after the "1/4 trough 4/4" of the attack example.
 Both the hold time and the time of the releaseEnvelope automatically adapt to the input material.</p>
 
-<p>I am looking for ways to reduce the amount of parameters, either by choosing good defaults or by inteligently coupling them.</p>
+<p>I am looking for ways to reduce the amount of parameters, either by choosing good defaults or by intelligently coupling them.</p>
 
 <h1>
 <a id="thanks" class="anchor" href="#thanks" aria-hidden="true"><span class="octicon octicon-link"></span></a>Thanks</h1>
 
-<p>I got a lot of <a href="https://github.com/sampov2/foo-plugins/blob/master/src/faust-source/compressor-basics.dsp#L126-L139">inspiration</a> from Sampo Savolainens <a href="https://github.com/sampov2/foo-plugins">foo-plugins</a>.</p>
+<p>I got a lot of <a href="https://github.com/sampov2/foo-plugins/blob/master/src/faust-source/compressor-basics.dsp#L126-L139">inspiration</a> from Sampo Savolainen's <a href="https://github.com/sampov2/foo-plugins">foo-plugins</a>.</p>
 
-<p>My first implementation was a lot like the blockdiagram in the explantion; at usable predelay values it ate CPU's for breakfast.
+<p>My first implementation was a lot like the blockdiagram in the explanation; at usable predelay values it ate CPU's for breakfast.
 <a href="http://www.grame.fr/qui-sommes-nous/compositeurs-associes/yann-orlarey">Yann Orlarey</a> provided <a href="https://github.com/magnetophon/LazyLimiter/blob/master/LazyLimiter.lib#L54-L66">the brainpower to replace the cpu-power</a> and made this thing actually usable!</p>
 
 <p>Many thanks, also to the rest of the Faust team!</p>
@@ -267,7 +267,6 @@ Both the hold time and the time of the releaseEnvelope automatically adapt to th
     <div id="footer_wrap" class="outer">
       <footer class="inner">
         <p class="copyright">LazyLimiter maintained by <a href="https://github.com/magnetophon">magnetophon</a></p>
-        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
       </footer>
     </div>
 
