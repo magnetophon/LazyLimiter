@@ -20,11 +20,11 @@ The cost is heavy CPU usage, and a lot of latency (186 ms by default)
 
 #usage:
 
-## distortion control
-This section controls the amount of distortion, versus the amount of gain reduction.
-It can provide gain reduction completely without distorting, yet still reacts quick to transients.
-Set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0, to hear this effect.
-While very clean, this sound has two problems:  
+## minimum gain reduction
+There will never be less gain reduction then what these setting dictate.
+You can have gain reduction completely without distortion, yet still react quick to transients.
+To hear this effect, set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0.  
+While very clean and fast, this sound has two problems:  
 1. It can be a bit too conservative. The dynamic hold section can fix that.  
 2. Simultaneously, it releases to quick in quiet parts. The musical release section fixes that.  
 ### input gain
@@ -77,8 +77,8 @@ time in ms for the AVG to go up
 ## conceptual idea
 Here is [a block-diagram](https://github.com/magnetophon/LazyLimiter/raw/master/docs/blockDiagram-svg/process.svg) to help explain.
 Unfortunately GitHub does not enable you to click tinto the sub blocks online, so you'll have to use a downloaded version for that.
-In this example, the lookahead time has been set to 4 samples, and it's a simplified implementation.
-The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
+In this example, the lookahead time has been set to 4 samples, the actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
+
 As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.
 
 Notice that all values inside GainCalculator are in dB:
