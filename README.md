@@ -72,13 +72,13 @@ time in ms for the AVG to go up
 
 ## conceptual idea
 Here is [a block-diagram](https://github.com/magnetophon/LazyLimiter/raw/master/docs/blockDiagram-svg/process.svg) to help explain.
-Unfortunately GitHub does not enable you to click tinto the sub blocks online, so you'll have to use a downloaded version for that.
+A clickable version can be found at https://magnetophon.github.io/LazyLimiter/.
 In this example, the lookahead time has been set to 4 samples, the actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
 
 As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.
 
 Notice that all values inside GainCalculator are in dB:
-0dB meaning no gain reduction, and -infinate meaning full gain reduction; silence, and 
+0dB meaning no gain reduction, and -infinite meaning full gain reduction; silence, and 
 In other words, the smaller the value, the more gain reduction.
 
 Inside the GainCalculator, there are 3 blocks doing the work: attackGainReduction, hold and releaseEnvelope.  
@@ -91,11 +91,13 @@ Together they make up minimumGainReduction.
 
 The attack is calculated as follows:
 - currentdown represents the amount of decibels we need to go down for the current input sample to stay below the threshold.
-- we make an array of 4, as follows:  
+- we make an array of 4, as follows:
+```
     currentdown@1*(1/4)  
     currentdown@2*(2/4)  
     currentdown@3*(3/4)  
     currentdown@4*(4/4)  
+```
 - we take the minimum value of this array
 In effect, we have created a constantly moving linear fade-down with a duration of 4 samples.
 
@@ -103,11 +105,13 @@ In effect, we have created a constantly moving linear fade-down with a duration 
 
 Hold works as follows:
 - lastdown represents the amount of decibels we where down at the previous sample, iow a feedback loop coming from the end of the GainCalculator.
-- we make an array of 4, as follows:  
+- we make an array of 4, as follows:
+```
 (currentdown@(0):max(lastdown))  
 (currentdown@(1):max(lastdown))  
 (currentdown@(2):max(lastdown))  
 (currentdown@(3):max(lastdown))  
+```
 - again we take the minimum of these values.
 - in plain English: we check if any of the coming samples needs the same or more gain reduction then we currently have, and if so, we stay down.
 
@@ -119,18 +123,18 @@ This is the signal that is multiplied with the delayed audio, as mentioned in th
 ## actual implementation:
 
 You can choose the maximum attack and hold time at compile time by changing [maxAttackTime](https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L38) and [maxHoldTime](https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L30).
-This way various comromises between quality and CPU usage can be made.
+This way various compromises between quality and CPU usage can be made.
 They are scaled with samplerate, but you have to [manually set it](https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L21) at compile time.
 
 I've made the shape of the attack curve variable, by putting a wave-shaping function after the "1/4 trough 4/4" of the attack example.
 Both the hold time and the time of the releaseEnvelope automatically adapt to the input material.
 
-I am looking for ways to reduce the amount of parameters, either by choosing good defaults or by inteligently coupling them.
+I am looking for ways to reduce the amount of parameters, either by choosing good defaults or by intelligently coupling them.
 
 # Thanks
-I got a lot of [inspiration](https://github.com/sampov2/foo-plugins/blob/master/src/faust-source/compressor-basics.dsp#L126-L139) from Sampo Savolainens [foo-plugins](https://github.com/sampov2/foo-plugins).
+I got a lot of [inspiration](https://github.com/sampov2/foo-plugins/blob/master/src/faust-source/compressor-basics.dsp#L126-L139) from Sampo Savolainen's [foo-plugins](https://github.com/sampov2/foo-plugins).
 
-My first implementation was a lot like the blockdiagram in the explantion; at usable predelay values it ate CPU's for breakfast.
+My first implementation was a lot like the blockdiagram in the explanation; at usable predelay values it ate CPU's for breakfast.
 [Yann Orlarey](http://www.grame.fr/qui-sommes-nous/compositeurs-associes/yann-orlarey) provided [the brainpower to replace the cpu-power](https://github.com/magnetophon/LazyLimiter/blob/master/LazyLimiter.lib#L54-L66) and made this thing actually usable!
 
 Many thanks, also to the rest of the Faust team!
