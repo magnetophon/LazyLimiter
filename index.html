@@ -4,11 +4,11 @@
   <head>
     <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="description" content="Lazylimiter : Do just enough, no more, no less.">
+    <meta name="description" content="LazyLimiter : Do just enough, no more, no less.">
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
-    <title>Lazylimiter</title>
+    <title>LazyLimiter</title>
   </head>
 
   <body>
@@ -18,7 +18,7 @@
         <header class="inner">
           <a id="forkme_banner" href="https://github.com/magnetophon/LazyLimiter">View on GitHub</a>
 
-          <h1 id="project_title">Lazylimiter</h1>
+          <h1 id="project_title">LazyLimiter</h1>
           <h2 id="project_tagline">Do just enough, no more, no less.</h2>
 
             <section id="downloads">
@@ -31,8 +31,7 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-
-<p>A clean yet fast lookahead limiter written in Faust.
+        <p>A clean yet fast lookahead limiter written in Faust.
 It uses somewhat of a 'brute force' algorithm , so it's quite CPU-hungry.</p>
 
 <h1>
@@ -59,12 +58,12 @@ Sine waves even have zero distortion down to the very low bass, at any level.</p
 <a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>usage:</h1>
 
 <h2>
-<a id="minimum-gain-reduction" class="anchor" href="#minimum-gain-reduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>minimum gain reduction</h2>
+<a id="distortion-control" class="anchor" href="#distortion-control" aria-hidden="true"><span class="octicon octicon-link"></span></a>distortion control</h2>
 
-<p>There will never be less gain reduction then what these setting dictate.
-You can have gain reduction completely without distortion, yet still react quick to transients.<br>
-To hear this effect, set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0.<br>
-While very clean and fast, this sound has two problems:<br>
+<p>This section controls the amount of distortion, versus the amount of gain reduction.
+It can provide gain reduction completely without distorting, yet still reacts quick to transients.
+Set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0, to hear this effect.
+While very clean, this sound has two problems:<br>
 1. It can be a bit too conservative. The dynamic hold section can fix that.<br>
 2. Simultaneously, it releases to quick in quiet parts. The musical release section fixes that.  </p>
 
@@ -172,13 +171,11 @@ This is how the curve of the attack varies it's shape:
 <a id="conceptual-idea" class="anchor" href="#conceptual-idea" aria-hidden="true"><span class="octicon octicon-link"></span></a>conceptual idea</h2>
 
 <p>Here is a block-diagram to help explain:
-<object data="images/blockDiagram-svg/process.svg" codetype="image/svg+xml"></object> </p>
+<img src="https://github.com/magnetophon/LazyLimiter/raw/master/docs/blockDiagram-svg/process.svg" alt=""> </p>
 
-<p>Click on the dark blue blocks to see what's inside, and on the background to go up a level again.</p>
-
-<p>In this example, the lookahead time has been set to 4 samples,the actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.</p>
-
-<p>As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.</p>
+<p>In this example, the lookahead time has been set to 4 samples, and it's a simplified implementation.
+The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
+As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.</p>
 
 <p>Notice that all values inside GainCalculator are in dB:
 0dB meaning no gain reduction, and -infinate meaning full gain reduction; silence, and 
@@ -198,11 +195,16 @@ Together they make up minimumGainReduction.<br>
 <ul>
 <li>currentdown represents the amount of decibels we need to go down for the current input sample to stay below the threshold.</li>
 <li>we make an array of 4, as follows:<br>
-currentdown@1<em>(1/4)<br>
-currentdown@2</em>(2/4)<br>
-currentdown@3<em>(3/4)<br>
-currentdown@4</em>(4/4)<br>
 </li>
+</ul>
+
+<pre><code>    currentdown@1*(1/4)  
+    currentdown@2*(2/4)  
+    currentdown@3*(3/4)  
+    currentdown@4*(4/4)
+</code></pre>
+
+<ul>
 <li>we take the minimum value of this array
 In effect, we have created a constantly moving linear fade-down with a duration of 4 samples.</li>
 </ul>
@@ -215,11 +217,16 @@ In effect, we have created a constantly moving linear fade-down with a duration 
 <ul>
 <li>lastdown represents the amount of decibels we where down at the previous sample, iow a feedback loop coming from the end of the GainCalculator.</li>
 <li>we make an array of 4, as follows:<br>
-(currentdown@(0):max(lastdown))<br>
-(currentdown@(1):max(lastdown))<br>
-(currentdown@(2):max(lastdown))<br>
-(currentdown@(3):max(lastdown))<br>
 </li>
+</ul>
+
+<pre><code>(currentdown@(0):max(lastdown))  
+(currentdown@(1):max(lastdown))  
+(currentdown@(2):max(lastdown))  
+(currentdown@(3):max(lastdown))  
+</code></pre>
+
+<ul>
 <li>again we take the minimum of these values.</li>
 <li>in plain English: we check if any of the coming samples needs the same or more gain reduction then we currently have, and if so, we stay down.</li>
 </ul>
@@ -257,7 +264,7 @@ Both the hold time and the time of the releaseEnvelope automatically adapt to th
     <!-- FOOTER  -->
     <div id="footer_wrap" class="outer">
       <footer class="inner">
-        <p class="copyright">Lazylimiter maintained by <a href="https://github.com/magnetophon">magnetophon</a></p>
+        <p class="copyright">LazyLimiter maintained by <a href="https://github.com/magnetophon">magnetophon</a></p>
         <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
       </footer>
     </div>
