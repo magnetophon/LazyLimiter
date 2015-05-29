@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Lazylimiter : Do just enough, no more, no less.">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Lazylimiter</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/magnetophon/LazyLimiter">View on GitHub</a>
+
+          <h1 id="project_title">Lazylimiter</h1>
+          <h2 id="project_tagline">Do just enough, no more, no less.</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/magnetophon/LazyLimiter/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/magnetophon/LazyLimiter/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="lazylimiter" class="anchor" href="#lazylimiter" aria-hidden="true"><span class="octicon octicon-link"></span></a>LazyLimiter</h1>
+
+<p>Do just enough, no more, no less.</p>
+
+<p>A clean yet fast lookahead limiter written in Faust.
+It uses somewhat of a 'brute force' algorithm , so it's quite CPU-hungry.</p>
+
+<h1>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span class="octicon octicon-link"></span></a>features</h1>
+
+<ul>
+<li>brick-wall limiter</li>
+<li>starts fading down before each peak
+
+<ul>
+<li>fade down can be anything between linear, and strongly exponential</li>
+</ul>
+</li>
+<li>will not start fading up if it needs to be down at least the same amount soon</li>
+<li>the elaborate auto release algorithm allows you to set a musical trade-off between clean and loud</li>
+</ul>
+
+<p>In combination, these features provide the holy grail of limiters: fast reaction on peaks, yet hardly any distortion on sustained material.
+Sine waves even have zero distortion down to the very low bass, at any level.</p>
+
+<p>The cost is heavy CPU usage, and a lot of latency (186 ms by default)</p>
+
+<h1>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>usage:</h1>
+
+<h2>
+<a id="distortion-control" class="anchor" href="#distortion-control" aria-hidden="true"><span class="octicon octicon-link"></span></a>distortion control</h2>
+
+<p>This section controls the amount of distortion, versus the amount of gain reduction.
+It can provide gain reduction completely without distorting, yet still reacts quick to transients.
+Set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0, to hear this effect.
+While very clean, this sound has two problems:<br>
+1. It can be a bit too conservative. The dynamic hold section can fix that.<br>
+2. Simultaneously, it releases to quick in quiet parts. The musical release section fixes that.  </p>
+
+<h3>
+<a id="input-gain" class="anchor" href="#input-gain" aria-hidden="true"><span class="octicon octicon-link"></span></a>input gain</h3>
+
+<p>Input gain in dB</p>
+
+<h3>
+<a id="threshold" class="anchor" href="#threshold" aria-hidden="true"><span class="octicon octicon-link"></span></a>threshold</h3>
+
+<p>maximum output level in dB</p>
+
+<h3>
+<a id="attack-shape" class="anchor" href="#attack-shape" aria-hidden="true"><span class="octicon octicon-link"></span></a>attack shape</h3>
+
+<p>0 gives a linear attack (slow), 1 a strongly exponential one (fast).
+Linear sounds cleaner, exponential punchier/louder.<br>
+This is how the curve of the attack varies it's shape:
+<img src="https://github.com/magnetophon/LazyLimiter/raw/master/docs/attack.gif" alt=""></p>
+
+<h3>
+<a id="minimum-release-time" class="anchor" href="#minimum-release-time" aria-hidden="true"><span class="octicon octicon-link"></span></a>minimum release time</h3>
+
+<p>Minimum time in ms for the GR to go up</p>
+
+<h3>
+<a id="stereo-link" class="anchor" href="#stereo-link" aria-hidden="true"><span class="octicon octicon-link"></span></a>stereo link</h3>
+
+<p>0 means independent, 1 fully linked</p>
+
+<h2>
+<a id="dynamic-hold" class="anchor" href="#dynamic-hold" aria-hidden="true"><span class="octicon octicon-link"></span></a>dynamic hold</h2>
+
+<p>The GR will not go up if it has to be back here within the hold time.</p>
+
+<h3>
+<a id="maximum-hold-time" class="anchor" href="#maximum-hold-time" aria-hidden="true"><span class="octicon octicon-link"></span></a>maximum hold time</h3>
+
+<p>maximum hold time in ms</p>
+
+<h3>
+<a id="minimum-hold-time" class="anchor" href="#minimum-hold-time" aria-hidden="true"><span class="octicon octicon-link"></span></a>minimum hold time</h3>
+
+<p>minimum hold time in ms</p>
+
+<h3>
+<a id="dynhold" class="anchor" href="#dynhold" aria-hidden="true"><span class="octicon octicon-link"></span></a>dynHold</h3>
+
+<p>shorten the hold time when the GR is below AVG</p>
+
+<h3>
+<a id="dynholdpow" class="anchor" href="#dynholdpow" aria-hidden="true"><span class="octicon octicon-link"></span></a>dynHoldPow</h3>
+
+<p>shape the curve of the hold time</p>
+
+<h3>
+<a id="dynholddiv" class="anchor" href="#dynholddiv" aria-hidden="true"><span class="octicon octicon-link"></span></a>dynHoldDiv</h3>
+
+<p>scale the curve of the hold time</p>
+
+<h2>
+<a id="musical-release" class="anchor" href="#musical-release" aria-hidden="true"><span class="octicon octicon-link"></span></a>musical release</h2>
+
+<p>this section fine tunes the release to sound musical</p>
+
+<h3>
+<a id="base-release-rate" class="anchor" href="#base-release-rate" aria-hidden="true"><span class="octicon octicon-link"></span></a>base release rate</h3>
+
+<p>release rate when the GR is at AVG, in dB/s</p>
+
+<h3>
+<a id="transient-speed" class="anchor" href="#transient-speed" aria-hidden="true"><span class="octicon octicon-link"></span></a>transient speed</h3>
+
+<p>speed up the release when the GR is below AVG</p>
+
+<h3>
+<a id="anti-pump" class="anchor" href="#anti-pump" aria-hidden="true"><span class="octicon octicon-link"></span></a>anti pump</h3>
+
+<p>slow down the release when the GR is above AVG</p>
+
+<h3>
+<a id="avg-attack" class="anchor" href="#avg-attack" aria-hidden="true"><span class="octicon octicon-link"></span></a>AVG attack</h3>
+
+<p>time in ms for the AVG to go down </p>
+
+<h3>
+<a id="avg-release" class="anchor" href="#avg-release" aria-hidden="true"><span class="octicon octicon-link"></span></a>AVG release</h3>
+
+<p>time in ms for the AVG to go up</p>
+
+<h2>
+<a id="metering-section" class="anchor" href="#metering-section" aria-hidden="true"><span class="octicon octicon-link"></span></a>metering section:</h2>
+
+<ul>
+<li>gain reduction in dB</li>
+<li>average gain reduction in dB</li>
+<li>hold time in ms</li>
+</ul>
+
+<h1>
+<a id="inner-workings" class="anchor" href="#inner-workings" aria-hidden="true"><span class="octicon octicon-link"></span></a>Inner workings</h1>
+
+<h2>
+<a id="conceptual-idea" class="anchor" href="#conceptual-idea" aria-hidden="true"><span class="octicon octicon-link"></span></a>conceptual idea</h2>
+
+<p>Here is a block-diagram to help explain:
+<img src="https://github.com/magnetophon/LazyLimiter/raw/master/docs/blockDiagram-svg/process.svg" alt=""> </p>
+
+<p>In this example, the lookahead time has been set to 4 samples, and it's a simplified implementation.
+The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
+As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.</p>
+
+<p>Notice that all values inside GainCalculator are in dB:
+0dB meaning no gain reduction, and -infinate meaning full gain reduction; silence, and 
+In other words, the smaller the value, the more gain reduction.</p>
+
+<p>Inside the GainCalculator, there are 3 blocks doing the work: attackGainReduction, hold and releaseEnvelope.<br>
+1. attackGainReduction calculates gradual fade down towards the eventual gain reduction.<br>
+2. hold makes sure we don't fade back up if we need to be down at least the same amount soon.<br>
+Together they make up minimumGainReduction.<br>
+3. this goes into releaseEnvelope, to tweak the release to be musical.  </p>
+
+<h3>
+<a id="attackgainreduction" class="anchor" href="#attackgainreduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>attackGainReduction</h3>
+
+<p>The attack is calculated as follows:</p>
+
+<ul>
+<li>currentdown represents the amount of decibels we need to go down for the current input sample to stay below the threshold.</li>
+<li>we make an array of 4, as follows:<br>
+currentdown@1<em>(1/4)<br>
+currentdown@2</em>(2/4)<br>
+currentdown@3<em>(3/4)<br>
+currentdown@4</em>(4/4)<br>
+</li>
+<li>we take the minimum value of this array
+In effect, we have created a constantly moving linear fade-down with a duration of 4 samples.</li>
+</ul>
+
+<h3>
+<a id="hold" class="anchor" href="#hold" aria-hidden="true"><span class="octicon octicon-link"></span></a>hold</h3>
+
+<p>Hold works as follows:</p>
+
+<ul>
+<li>lastdown represents the amount of decibels we where down at the previous sample, iow a feedback loop coming from the end of the GainCalculator.</li>
+<li>we make an array of 4, as follows:<br>
+(currentdown@(0):max(lastdown))<br>
+(currentdown@(1):max(lastdown))<br>
+(currentdown@(2):max(lastdown))<br>
+(currentdown@(3):max(lastdown))<br>
+</li>
+<li>again we take the minimum of these values.</li>
+<li>in plain English: we check if any of the coming samples needs the same or more gain reduction then we currently have, and if so, we stay down.</li>
+</ul>
+
+<h3>
+<a id="releaseenvelope" class="anchor" href="#releaseenvelope" aria-hidden="true"><span class="octicon octicon-link"></span></a>releaseEnvelope</h3>
+
+<p>We take the minimum of attack and hold, and enter it into the release function, which is just a 0 attack, logarithmic release envelope follower.
+This is the signal that is multiplied with the delayed audio, as mentioned in the explanation of attack.</p>
+
+<h2>
+<a id="actual-implementation" class="anchor" href="#actual-implementation" aria-hidden="true"><span class="octicon octicon-link"></span></a>actual implementation:</h2>
+
+<p>You can choose the maximum attack and hold time at compile time by changing <a href="https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L38">maxAttackTime</a> and <a href="https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L30">maxHoldTime</a>.
+This way various comromises between quality and CPU usage can be made.
+They are scaled with samplerate, but you have to <a href="https://github.com/magnetophon/LazyLimiter/blob/master/GUI.lib#L21">manually set it</a> at compile time.</p>
+
+<p>I've made the shape of the attack curve variable, by putting a wave-shaping function after the "1/4 trough 4/4" of the attack example.
+Both the hold time and the time of the releaseEnvelope automatically adapt to the input material.</p>
+
+<p>I am looking for ways to reduce the amount of parameters, either by choosing good defaults or by inteligently coupling them.</p>
+
+<h1>
+<a id="thanks" class="anchor" href="#thanks" aria-hidden="true"><span class="octicon octicon-link"></span></a>Thanks</h1>
+
+<p>I got a lot of <a href="https://github.com/sampov2/foo-plugins/blob/master/src/faust-source/compressor-basics.dsp#L126-L139">inspiration</a> from Sampo Savolainens <a href="https://github.com/sampov2/foo-plugins">foo-plugins</a>.</p>
+
+<p>My first implementation was a lot like the blockdiagram in the explantion; at usable predelay values it ate CPU's for breakfast.
+<a href="http://www.grame.fr/qui-sommes-nous/compositeurs-associes/yann-orlarey">Yann Orlarey</a> provided <a href="https://github.com/magnetophon/LazyLimiter/blob/master/LazyLimiter.lib#L54-L66">the brainpower to replace the cpu-power</a> and made this thing actually usable!</p>
+
+<p>Many thanks, also to the rest of the Faust team!</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Lazylimiter maintained by <a href="https://github.com/magnetophon">magnetophon</a></p>
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
