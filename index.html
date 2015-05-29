@@ -63,12 +63,12 @@ Sine waves even have zero distortion down to the very low bass, at any level.</p
 <a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>usage:</h1>
 
 <h2>
-<a id="distortion-control" class="anchor" href="#distortion-control" aria-hidden="true"><span class="octicon octicon-link"></span></a>distortion control</h2>
+<a id="minimum-gain-reduction" class="anchor" href="#minimum-gain-reduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>minimum gain reduction</h2>
 
-<p>This section controls the amount of distortion, versus the amount of gain reduction.
-It can provide gain reduction completely without distorting, yet still reacts quick to transients.
-Set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0, to hear this effect.
-While very clean, this sound has two problems:<br>
+<p>There will never be less gain reduction then what these setting dictate.
+You can have gain reduction completely without distortion, yet still react quick to transients.<br>
+To hear this effect, set the minimum hold time from the next section to full and the anti pump from the 3rd section to 0.<br>
+While very clean and fast, this sound has two problems:<br>
 1. It can be a bit too conservative. The dynamic hold section can fix that.<br>
 2. Simultaneously, it releases to quick in quiet parts. The musical release section fixes that.  </p>
 
@@ -180,9 +180,9 @@ This is how the curve of the attack varies it's shape:
 
 <p>Click on the dark blue blocks to see what's inside, and on the background to go up a level again.</p>
 
-<p>In this example, the lookahead time has been set to 4 samples, and it's a simplified implementation.
-The actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.
-As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.</p>
+<p>In this example, the lookahead time has been set to 4 samples,the actual limiter uses 8192 at a samplerate of 44100, and even more at higher samplerates.</p>
+
+<p>As with any lookahead limiter, there is a block calculating the gain reduction (GR), and that value is multiplied with the delayed signal.</p>
 
 <p>Notice that all values inside GainCalculator are in dB:
 0dB meaning no gain reduction, and -infinate meaning full gain reduction; silence, and 
