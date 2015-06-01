@@ -10,5 +10,6 @@
 *.1.temp-svg
 *.2.temp-svg
 *.*~
-LookaheadLimiter
-LookaheadLimiter-svg
+LazyLimiter
+LazyLimiter-svg
+LazyLimiter.lv2
