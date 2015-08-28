@@ -14,6 +14,15 @@ Sine waves even have zero distortion down to the very low bass, at any level.
 
 The cost is heavy CPU usage, and a lot of latency (186 ms by default)
 
+#instalation:
+- install faust
+- copy the repo
+- cd to it
+- run faust2jack LazyLimiter.dsp
+- run ./LazyLimiter
+
+There is also faust2lv2, faust2alsa, and about 30 more variants.
+
 #usage:
 
 ## minimum gain reduction
