@@ -36,11 +36,16 @@ time_ratio_release(t) = exp(1) / ( t * SR);// * time_ratio_target_rel );
 // 2*k : number of windows, w : size of the window in samples
 // total window siz in samples: 2*k*w
 // example _ : slidemin(16,16) : _
-slidemin(k,w,x) = variable_hold(w,x) : pmin(k,w)
+slidemin(k,w,x) = fixed_hold(w,x) : pmin(k,w)
   with {
     variable_hold(w,x) =
       0:seq(i,maxWinSize,
        (((i+1)>(maxWinSize-w))*(x@(i))),_: min
+      );
+
+    fixed_hold(w,x) =
+      0:seq(i,maxWinSize,
+       ((x@(i))),_: min
       );
     smin(n) = F ~ (_,_) : !,_
       with {
@@ -67,19 +72,43 @@ slidemax(k,w) = smax(w) : pmax(k,w)
 
 Lookahead(x,lastdown,avgLevel) =
 attackGRYann,
-Yann_hold
+// Yann_hold(x)
+block_hold_var(x)
+// attackGR,
+// variable_hold(maxHoldTime,holdTime)
 :min
+// ;
+// lastdown = -0.002;
 with {
     // this one should be more efficient: fixed hold time
-    fixed_hold = ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min ));
-    // yet this one is more efficient: variable hold time
-    variable_hold =
-      0:seq(i,maxHoldTime,
-       (((i+1)>(maxHoldTime-holdTime))*(currentdown(x)@(i):max(lastdown))),_: min 
+    // fixed_hold = ( 0:seq(i,maxHoldTime,(currentdown(x)@(i):max(lastdown)),_: min ));
+    fixed_hold(w,x) =
+      0:seq(i,maxWinSize,
+       ((x@(i))),_: min
       );
-    Yann_hold=  slidemin(nrWin,winSize,currentdown(x)) : max(lastdown)
+    // yet this one is more efficient: variable hold time
+    variable_hold(maxSize,size) =
+      0:seq(i,maxSize,
+       (((i+1)>(maxSize-size))*(currentdown(x)@(i))),_: min
+      ):max(lastdown);
+
+    block_hold(x) = ( 0:seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize))),_:min )):max(lastdown);
+  block_hold_var(x) =
+    ( variable_hold(maxWinSize,int(decimal(winSize/maxWinSize)*maxWinSize))@(floor(winSize/maxWinSize)*maxWinSize)
+      :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*(i<floor(winSize/maxWinSize)))),_:min )
+    ):max(lastdown);
+// winSize = int((holdTime):max(minHoldTime)):dhMeter;
+// winSize = int((holdTime/(1+(((((avgLevel-lastdown):max(0)))*dynHold)))):max(minHoldTime)):dhMeter;
+winSize = int((holdTime/(1+(((((avgLevel-lastdown):max(0))/dynHoldDiv):pow(dynHoldPow):max(0)*dynHold*dynHoldDiv)))):max(minHoldTime):dhMeter);
+block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate(block)@(int(i*block))*(i<floor(size/block))) :> _ with {
+  // variable = delaysum(size:min(block),block);
+  variable = @(floor(size/block)*block):delaysum(int(decimal(size/block)*block),block);
+  };
+
+    Yann_hold(x)=  slidemin(nrWin,winSize,currentdown(x)) : max(lastdown)
     with {
-      winSize = ((holdTime/(1+(((((avgLevel-lastdown):max(0))/dynHoldDiv):pow(dynHoldPow):max(0)*dynHold*dynHoldDiv)))):max(minHoldTime):dhMeter);
+      winSize = maxWinSize;
+      // winSize = ((holdTime/(1+(((((avgLevel-lastdown):max(0))/dynHoldDiv):pow(dynHoldPow):max(0)*dynHold*dynHoldDiv)))):max(minHoldTime):dhMeter);
     };
     /*attackGRYann = currentdown(x)<:pmin(maxAttackTime)*/
     /*with {*/
@@ -136,8 +165,8 @@ with {
 ;
 
 // smoothing function, attack coefficient "a", release coefficient "r" and signal x
-SMOOTH(a, r,  x) = 
-	((x     *      select2( (x < _), a, r )) + 
+SMOOTH(a, r,  x) =
+	((x     *      select2( (x < _), a, r )) +
 	(_ * (1 - select2( (x < _), a, r)))) ~ (_<:_,_,_);
 
 
@@ -246,9 +275,5 @@ simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y)
 //jack: 52% CPU  169.49s
 //maxHoldTime = 2048 maxAttackTime = 1024
 //jack: 52% CPU 485.55s
-naiveStereoLimiter(x,y) = (gainComputer(x),gainComputer(y)):min+(inGain@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+naiveStereoLimiter(x,y) = (gainComputer(x),gainComputer(y)):min:meter+(inGain@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 minimalStereoLimiter(x,y) = gainComputer((abs(x),abs(y)):max):meter+(inGain@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
-
-
-
-
