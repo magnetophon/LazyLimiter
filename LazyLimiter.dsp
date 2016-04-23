@@ -61,8 +61,8 @@ import ("LazyLimiter.lib");
 //process =avgMeter(inGain);
 //process(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~(cross(2));
 //(stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((_,_ <: !,_,_,!),_)
-// process = stereoLimiter;
-process = naiveStereoLimiter;
+process = stereoLimiter;
+// process = naiveStereoLimiter;
 // process(x) = block_hold(x);
 // process(x) = Yann_hold(x);
 // process = ((fixed_hold(maxWinSize)@(5):max(lastdown)),_): min ;
