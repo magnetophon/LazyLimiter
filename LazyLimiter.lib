@@ -94,7 +94,7 @@ with {
 
     block_hold(x) = ( 0:seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize))),_:min )):max(lastdown);
   block_hold_var(x) =
-    ( variable_hold(maxWinSize,int(decimal(winSize/maxWinSize)*maxWinSize))@(floor(winSize/maxWinSize)*maxWinSize)
+    ( variable_hold(maxWinSize,((decimal(winSize/maxWinSize))*maxWinSize))@(floor(winSize/maxWinSize)*maxWinSize)
       :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*(i<floor(winSize/maxWinSize)))),_:min )
     ):max(lastdown);
 // winSize = int((holdTime):max(minHoldTime)):dhMeter;
