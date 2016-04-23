@@ -35,8 +35,10 @@ maxHoldTime      = 8192; //                                     = 186ms
 maxWinSize         = int(maxHoldTime/nrWin*SampleRate/44100);
 // maxWinSize         = int(128*SampleRate/44100);
 // maxWinSize       = int(4*SampleRate/44100);
-// nrWin              = 64;
-nrWin              = 32;
+// nrWin              = 128;
+nrWin              = 64;
+// nrWin              = 32;
+// nrWin              = 256;
 // nrWin              = 512;
 // nrWin            = 4;
 //with maxHoldTime = 1024, having maxAttackTime                   = 512 uses more cpu then maxAttackTime                       = 1024
