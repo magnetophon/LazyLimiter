@@ -22,25 +22,25 @@ import("filter.lib");
 SampleRate = 44100;
 //Lookahead and LookaheadPar need a power of 2 as a size
 // maxHoldTime      = 4; //                                        = 0.1ms, for looking at the block diagram
-// maxHoldTime      = 32; //                                       =
 //maxHoldTime      = 128; //                                      = 3ms
 //maxHoldTime      = 256; //                                      = 6ms
 // maxHoldTime      = 512; //                                      = 12ms, starts to sound OK, 84% cpu
-// maxHoldTime      = 1024; //                                     = 23ms, good sound, 185% CPU
+maxHoldTime      = 1024; //                                     = 23ms, good sound, 185% CPU
 // maxHoldTime      = 2048; //                                     = 46ms, even less distortion, but can be less loud, 300% CPU
 // maxHoldTime        = maxWinSize*nrWin;//8192 //                = 186ms
 // maxHoldTime        = maxWinSize*nrWin*2;//8192 //                = 186ms
 // maxHoldTime      = 4096; //                                     = 92ms
-maxHoldTime      = 8192; //                                     = 186ms
+// maxHoldTime      = 8192; //                                     = 186ms
+nrWin              = 64;
+// nrWin            = 4;
+// maxHoldTime      = 32; //                                       =
 maxWinSize         = int(maxHoldTime/nrWin*SampleRate/44100);
 // maxWinSize         = int(128*SampleRate/44100);
 // maxWinSize       = int(4*SampleRate/44100);
 // nrWin              = 128;
-nrWin              = 64;
 // nrWin              = 32;
 // nrWin              = 256;
 // nrWin              = 512;
-// nrWin            = 4;
 //with maxHoldTime = 1024, having maxAttackTime                   = 512 uses more cpu then maxAttackTime                       = 1024
 // maxAttackTime      = int(16*SampleRate/44100):min(maxHoldTime);
 maxAttackTime      = int(1024*SampleRate/44100):min(maxHoldTime);

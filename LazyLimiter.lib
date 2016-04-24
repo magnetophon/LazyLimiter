@@ -71,7 +71,8 @@ slidemax(k,w) = smax(w) : pmax(k,w)
   };
 
 Lookahead(x,lastdown,avgLevel) =
-attackGRYann,
+// attackGRYann,
+attackGRrelative,
 // Yann_hold(x)
 block_hold_var(x)
 // attackGR,
@@ -119,7 +120,7 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
       /*pmin(del,mini,k) = del <: @(1), (del,mini:pmin(k-1) ,(@(1)*((k/maxAttackTime):attackShaper))  : min);*/
     /*};*/
     attackGRYann =
-      (0,currentdown(x)@(maxHoldTime-maxAttackTime)):seq(i,maxAttackTime,
+      (0,(currentdown(x)-block_hold_var(x))@(maxHoldTime-maxAttackTime)):seq(i,maxAttackTime,
         (
           (_,
             (
@@ -132,7 +133,7 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
           )
           :min,_
         )
-      ):(_,!);
+      ):(_,!)+block_hold_var(x)@(maxHoldTime-maxAttackTime);
     attackGR =
        0: seq(i,maxAttackTime,
          (currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*(((i+1)/maxAttackTime):attackShaper),_: min
@@ -143,9 +144,12 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
       // which does lower distorion (at least for linear attack)
       // oddly enough, with minimalStereoLimiter, the both variants use about the same amount of CPU
     attackGRrelative =
-       0: seq(i,maxAttackTime,
-         ((currentdown(x)@(i+1-maxAttackTime+maxHoldTime))+lastdown)*(((i+1)/maxAttackTime):attackShaper),_: min
-       )-lastdown;
+       (0: seq(i,maxAttackTime,
+         ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*(((i+1)/maxAttackTime):attackShaper))+lastdown)*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown)),_: min
+       ));
+    lastRel = select2((currentdown(x)@maxHoldTime)>(currentdown(x)@maxHoldTime+1),0,lastdown)@(-maxAttackTime+maxHoldTime);
+    // lastRel = select2(lastdown>(currentdown(x)@maxHoldTime+1),0,lastdown)@(-maxAttackTime+maxHoldTime);
+    // lastRel = select2((lastdown@(-maxAttackTime+maxHoldTime))<currentdown(x)@(1-maxAttackTime+maxHoldTime),0,lastdown@(-maxAttackTime+maxHoldTime));
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
     // attackShaperLookup takes shorter to compile, but uses slightly more cpu than attackShaper, even though the later has a fixed attack shape.
     attackShaperLookup(x)= rdtable(maxAttackTime, ( tanh((time/maxAttackTime):pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1)),int(x*maxAttackTime))
@@ -259,7 +263,7 @@ stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,
 
 
 
-stereoLimiter(x,y)  = stereoGainComputer(x,y) : (((meter:_+(inGain@maxHoldTime):db2linear)*x@maxHoldTime,((meter:_+(inGain@maxHoldTime):db2linear)*y@maxHoldTime)));
+stereoLimiter(x,y)  = (stereoGainComputer(x,y) : (((meter:_+(inGain@maxHoldTime):db2linear)*x@maxHoldTime,((meter:_+(inGain@maxHoldTime):db2linear)*y@maxHoldTime)))),(stereoGainComputer(x,y):par(i, 2, db2linear ));
 
 //faust2jaqt -t 999999 -time -sch -vs 4096 -mcd 8192 LazyLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
@@ -278,5 +282,5 @@ simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y)
 //jack: 52% CPU  169.49s
 //maxHoldTime = 2048 maxAttackTime = 1024
 //jack: 52% CPU 485.55s
-naiveStereoLimiter(x,y) = (gainComputer(x),gainComputer(y)):min:meter+(inGain@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
-minimalStereoLimiter(x,y) = gainComputer((abs(x),abs(y)):max):meter+(inGain@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+naiveStereoLimiter(x,y) = ((gainComputer(x),gainComputer(y)):min:meter+(inGain@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime)),((gainComputer(x),gainComputer(y)):par(i, 2, db2linear));
+minimalStereoLimiter(x,y) = (gainComputer((abs(x),abs(y)):max):meter+(inGain@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime)),(gainComputer((abs(x),abs(y)):max):db2linear);
