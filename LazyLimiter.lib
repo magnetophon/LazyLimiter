@@ -120,7 +120,7 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
       /*pmin(del,mini,k) = del <: @(1), (del,mini:pmin(k-1) ,(@(1)*((k/maxAttackTime):attackShaper))  : min);*/
     /*};*/
     attackGRYann =
-      (0,(currentdown(x)-block_hold_var(x))@(maxHoldTime-maxAttackTime)):seq(i,maxAttackTime,
+      (0,(currentdown(x))@(maxHoldTime-maxAttackTime)):seq(i,maxAttackTime,
         (
           (_,
             (
@@ -133,7 +133,7 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
           )
           :min,_
         )
-      ):(_,!)+block_hold_var(x)@(maxHoldTime-maxAttackTime);
+      ):(_,!);
     attackGR =
        0: seq(i,maxAttackTime,
          (currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*(((i+1)/maxAttackTime):attackShaper),_: min
@@ -145,9 +145,10 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
       // oddly enough, with minimalStereoLimiter, the both variants use about the same amount of CPU
     attackGRrelative =
        (0: seq(i,maxAttackTime,
-         ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*(((i+1)/maxAttackTime):attackShaper))+lastdown)*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown)),_: min
+         ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i) )*(((i+1)/maxAttackTime):attackShaper))+lastRel(i))*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown)),_: min
        ));
-    lastRel = select2((currentdown(x)@maxHoldTime)>(currentdown(x)@maxHoldTime+1),0,lastdown)@(-maxAttackTime+maxHoldTime);
+    // lastRel = select2((currentdown(x)@maxHoldTime)>(currentdown(x)@maxHoldTime+1),0,lastdown)@(-maxAttackTime+maxHoldTime);
+    lastRel(i) = select2((lastdown<=lastdown'),lastdown,_)~_;
     // lastRel = select2(lastdown>(currentdown(x)@maxHoldTime+1),0,lastdown)@(-maxAttackTime+maxHoldTime);
     // lastRel = select2((lastdown@(-maxAttackTime+maxHoldTime))<currentdown(x)@(1-maxAttackTime+maxHoldTime),0,lastdown@(-maxAttackTime+maxHoldTime));
     attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
