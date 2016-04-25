@@ -72,11 +72,13 @@ slidemax(k,w) = smax(w) : pmax(k,w)
 
 Lookahead(x,lastdown,avgLevel) =
 // attackGRYann,
-attackGRrelative,
-// attackGR,
+// attackGRrelative,
+attackGR,
 // Yann_hold(x)
-// block_hold_var(x)
-block_hold(x)
+// variable_hold(maxHoldTime,winSize,x)
+block_hold_var(x)
+// block_hold(x)
+// (fixed_hold(maxHoldTime,currentdown(x)):max(lastdown))
 // variable_hold(maxHoldTime,holdTime,x)
 :min
 // ;
@@ -92,14 +94,19 @@ with {
     // yet this one is more efficient: variable hold time
     variable_hold(maxSize,size,x) =
       0:seq(i,maxSize,
-       (((i)<(size))*(currentdown(x)@(i))),_: min
+       (((maxSize-i)<=(size))*(currentdown(x)@(i))),_: min
        // (((i+1)>(maxSize-size))*(currentdown(x)@(i))),_: min
       ):max(lastdown);
 
     block_hold(x) = ( 0:seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize))),_:min )):max(lastdown);
+  block_hold_semivar(x) =
+    ( (0)
+      :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*((int(maxHoldTime/maxWinSize)-i)<=ceil(winSize/maxWinSize)))),_:min )
+    ):max(lastdown);
+
   block_hold_var(x) =
-    ( variable_hold(maxWinSize,((decimal(winSize/maxWinSize))*maxWinSize),x@(floor(winSize/maxWinSize)*maxWinSize))
-      :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*(i<floor(winSize/maxWinSize)))),_:min )
+    ( (variable_hold(maxWinSize,((decimal(winSize/maxWinSize))*maxWinSize),x@(floor(winSize/maxWinSize)*maxWinSize)))
+      :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*((int(maxHoldTime/maxWinSize)-i)<=floor(winSize/maxWinSize)))),_:min )
     ):max(lastdown);
 
 // winSize = int((holdTime):max(minHoldTime)):dhMeter;
