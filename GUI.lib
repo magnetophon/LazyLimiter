@@ -55,7 +55,7 @@ minKnobGroup(x)          = main_group(vgroup("[0]minimum gain reduction [tooltip
   threshold               = minKnobGroup(hslider("[1]threshold [unit:dB]   [tooltip: maximum output level in dB]", -0.5, -60, 0, 0.1));
   attack                  = minKnobGroup(hslider("[2]attack shape[tooltip: 0 gives a linear attack (slow), 1 a strongly exponential one (fast)]", 1 , 0, 1 , 0.001));
 //  release               = minKnobGroup(hslider("[3]lin release[unit:dB/s][tooltip: maximum release rate]", 10, 6, 500 , 1)/SampleRate);
-  minRelease              = minKnobGroup(hslider("[3]minimum release time[unit:ms]   [tooltip: minimum time in ms for the GR to go up][scale:log]",30, 0.1, 500, 0.1)/1000):time_ratio_release;
+  minRelease              = minKnobGroup(hslider("[3]minimum release time[unit:ms]   [tooltip: minimum time in ms for the GR to go up][scale:log]",30, 1, 100, 0.1)/1000):time_ratio_release;
 //  time_ratio_target_rel = minKnobGroup(hslider("[4]release shape", 1, 0.5, 5.0, 0.001));
   // hardcoding link to 1 leads to much longer compilation times, yet similar cpu-usage, while one would expect less cpu usage and maybe shorter compilation time
   link              = minKnobGroup(hslider("[5]stereo link[tooltip: 0 means independent, 1 fully linked]", 1, 0, 1 , 0.001));
@@ -73,7 +73,7 @@ dynHoldKnobGroup(x) = main_group(vgroup("[1]dynamic hold [tooltip: the GR will n
 
 
 musicRelKnobGroup(x) = main_group(vgroup("[2] musical release [tooltip: this section fine tunes the release to sound musical]", x));
-  baserelease        = musicRelKnobGroup(hslider("[0]base release rate[unit:dB/s][tooltip: release rate when the GR is at AVG, in dB/s][scale:log]", 30, 0.1, 60 , 0.1)/SampleRate);
+  baserelease        = musicRelKnobGroup(hslider("[0]base release rate[unit:dB/s][tooltip: release rate when the GR is at AVG, in dB/s][scale:log]", 30, 0.1, 6000 , 0.1)/SampleRate);
   transientSpeed     = musicRelKnobGroup(hslider("[1]transient speed[tooltip:  speed up the release when the GR is below AVG ]", 0.5, 0, 1,   0.001));
   antiPump           = musicRelKnobGroup(hslider("[2]anti pump[tooltip: slow down the release when the GR is above AVG ]", 0.5, 0, 1,   0.001));
   attackAVG          = musicRelKnobGroup(time_ratio_attack(hslider("[3] AVG attack [unit:ms]   [tooltip: time in ms for the AVG to go down][scale:log]", 1400, 50, 5000, 1)/1000)) ;

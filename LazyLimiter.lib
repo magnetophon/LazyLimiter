@@ -72,15 +72,15 @@ slidemax(k,w) = smax(w) : pmax(k,w)
 
 Lookahead(x,lastdown,avgLevel) =
 // attackGRYann,
-// attackGRrelative,
-attackGR,
+attackGRrelative,
+// attackGR,
 // Yann_hold(x)
 // variable_hold(maxHoldTime,winSize,x)
-block_hold_var(x)
-// block_hold(x)
+// block_hold_var(x)
+block_hold(x)
 // (fixed_hold(maxHoldTime,currentdown(x)):max(lastdown))
 // variable_hold(maxHoldTime,holdTime,x)
-:min
+:min//:min(currentdown(x)@maxHoldTime)// todo: remove this hack without getting overshoot
 // ;
 // lastdown = -0.002;
 with {
@@ -153,15 +153,28 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
       // oddly enough, with minimalStereoLimiter, the both variants use about the same amount of CPU
     attackGRrelative =
        (0: seq(i,maxAttackTime,
-         ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i) )*(((i+1)/maxAttackTime):attackShaper))+lastRel(i))*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown)),_: min
-      // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i) )*(attackShaper((i+1)/maxAttackTime)))+lastRel(i))*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown)),_: min
+            // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i))*(((i+1)/maxAttackTime):attackShaperI(i)))+lastRel(i))),_: min
+            ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i))*(((i+1)/maxAttackTime):attackShaper))+lastRel(i)):(_<:((_<lastRel(i) ),_):*)),_: min
+         // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i))*(((i+1)/maxAttackTime):attackShaper))+lastRel(i)):(_<:((_<=lastdown),_):*)),_: min
+         // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i) )*(((i+1)/maxAttackTime):attackShaper))+lastRel(i))*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown@(i+1))),_: min
+      // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i) )*(((i+1)/maxAttackTime):attackShaper))+lastRel(i))*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown)),_: min
+       // ));
        ));
     // lastRel = select2((currentdown(x)@maxHoldTime)>(currentdown(x)@maxHoldTime+1),0,lastdown)@(-maxAttackTime+maxHoldTime);
+    // lastRel(i) = 0;
     // lastRel(i) = select2((lastdown<=lastdown'),lastdown,_)~_;
-    lastRel(i) = select2((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)>lastdown),lastdown,_)~_;
+    // lastRel(i) = lastdown;
+    lastRel(i) = lastdown@(i):max(lastdown);
+    // lastRel(i) = lastdown@(i-maxAttackTime+maxHoldTime); // stays down
+    // lastRel(i) = select2((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<=lastdown),lastdown,_)~_;
+    // lastRel(i) = select2((currentdown(x)@(-maxAttackTime+maxHoldTime)>=currentdown(x)@(1-maxAttackTime+maxHoldTime)),lastdown,_)~_;
     // lastRel = select2(lastdown>(currentdown(x)@maxHoldTime+1),0,lastdown)@(-maxAttackTime+maxHoldTime);
     // lastRel = select2((lastdown@(-maxAttackTime+maxHoldTime))<currentdown(x)@(1-maxAttackTime+maxHoldTime),0,lastdown@(-maxAttackTime+maxHoldTime));
-    attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
+    attackShaperHalf(fraction)= attackShaperHalf(fraction);
+    // attackShaperI(i,fraction)= select2(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)>lastdown,attackShaperHalf(fraction),32/maxAttackTime);
+    attackShaperI(i,fraction)= select2(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)>lastdown,attackShaperHalf(fraction),((attackShaperHalf((fraction*-1)+1)*-1)+1));
+    // attackShaper(fraction)= select2(currentdown(x)@maxHoldTime>lastdown,attackShaperHalf(fraction),((attackShaperHalf((fraction*-1)+1)*-1)+1));
+    attackShaper(fraction)= tanh(fraction:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
     // attackShaperLookup takes shorter to compile, but uses slightly more cpu than attackShaper, even though the later has a fixed attack shape.
     attackShaperLookup(x)= rdtable(maxAttackTime, ( tanh((time/maxAttackTime):pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1)),int(x*maxAttackTime))
       with { attack = 1; };
@@ -253,7 +266,8 @@ linearXfade(x,a,b) = a*(1-x),b*x : +;
 
 limiter(x) = (Lookahead(x):releaseEnv(minRelease))~_+(inGain@maxHoldTime):meter:db2linear *x@maxHoldTime;
 
-gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit)~(_,_):(_,!);
+gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit:(min(currentdown(x)@maxHoldTime),_))~(_,_):(_,!);
+//:min(currentdown(x)@maxHoldTime)// todo: remove this hack without getting overshoot
 //gainComputer(x) = (Lookahead(x):releaseEnv(minRelease)<:(_,rateLimit):linearXfade((link*-1)+1))~_<:(_,rateLimit):linearXfade(link);
 //gainComputer(x) = (Lookahead(x)<:(releaseEnv(minRelease),rateLimit):linearXfade(link))~_;
 //gainComputer(x) = (Lookahead(x):releaseEnv(minRelease))~_;
