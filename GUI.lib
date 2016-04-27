@@ -25,12 +25,12 @@ SampleRate = 44100;
 // maxHoldTime      = 128; //                                      = 3ms
 //maxHoldTime      = 256; //                                      = 6ms
 // maxHoldTime      = 512; //                                      = 12ms, starts to sound OK, 84% cpu
-maxHoldTime      = 1024; //                                     = 23ms, good sound, 185% CPU
+// maxHoldTime      = 1024; //                                     = 23ms, good sound, 185% CPU
 // maxHoldTime      = 2048; //                                     = 46ms, even less distortion, but can be less loud, 300% CPU
 // maxHoldTime        = maxWinSize*nrWin;//8192 //                = 186ms
 // maxHoldTime        = maxWinSize*nrWin*2;//8192 //                = 186ms
 // maxHoldTime      = 4096; //                                     = 92ms
-// maxHoldTime      = 8192; //                                     = 186ms
+maxHoldTime      = 8192; //                                     = 186ms
 nrWin              = 64;
 // nrWin            = 4;
 // maxHoldTime      = 32; //                                       =

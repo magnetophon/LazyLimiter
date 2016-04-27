@@ -76,8 +76,8 @@ attackGRrelative,
 // attackGR,
 // Yann_hold(x)
 // variable_hold(maxHoldTime,winSize,x)
-// block_hold_var(x)
-block_hold(x)
+block_hold_var(x)
+// block_hold(x)
 // (fixed_hold(maxHoldTime,currentdown(x)):max(lastdown))
 // variable_hold(maxHoldTime,holdTime,x)
 :min//:min(currentdown(x)@maxHoldTime)// todo: remove this hack without getting overshoot
@@ -104,8 +104,13 @@ with {
       :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*((int(maxHoldTime/maxWinSize)-i)<=ceil(winSize/maxWinSize)))),_:min )
     ):max(lastdown);
 
-  block_hold_var(x) =
+  block_hold_var_OLD(x) =
     ( (variable_hold(maxWinSize,((decimal(winSize/maxWinSize))*maxWinSize),x@(floor(winSize/maxWinSize)*maxWinSize)))
+      :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*((int(maxHoldTime/maxWinSize)-i)<=floor(winSize/maxWinSize)))),_:min )
+    ):max(lastdown);
+
+  block_hold_var(x) =
+    ( 0:seq(i,int(maxHoldTime/maxWinSize),(variable_hold(maxWinSize,((decimal(winSize/maxWinSize))*maxWinSize),x)@(i*maxWinSize)*((int(winSize/maxWinSize)<i))),_:min )
       :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*((int(maxHoldTime/maxWinSize)-i)<=floor(winSize/maxWinSize)))),_:min )
     ):max(lastdown);
 
@@ -160,6 +165,17 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
       // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i) )*(((i+1)/maxAttackTime):attackShaper))+lastRel(i))*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown)),_: min
        // ));
        ));
+    attackGRrelativeNew =
+       (0: seq(i,maxAttackTime,
+            ((lastdown+((currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*(((1)/maxAttackTime)))):(_<:((_<lastdown),_):*)),_: min
+            // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*(((i+1)/maxAttackTime):newshape))+lastdown):(_<:((_<lastdown),_):*)),_: min
+            // ((((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*((i+1)/maxAttackTime)/(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown):newshape)*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)))+lastdown):(_<:((_<lastdown),_):*)),_: min
+       ));
+       // newshape(s) = ((sin(((s)*PI)-(0.5*PI))+1)/2):pow(1+(attack*40));
+       add =       hslider("add", 0, 0, 1, 0.001)/10;
+       newshape(s) = s*(attack:pow(10));
+       // newshape = ((_+add):pow(1+(attack*40)))-(add:pow(1+(attack*40)));
+       // newshape = _;
     // lastRel = select2((currentdown(x)@maxHoldTime)>(currentdown(x)@maxHoldTime+1),0,lastdown)@(-maxAttackTime+maxHoldTime);
     // lastRel(i) = 0;
     // lastRel(i) = select2((lastdown<=lastdown'),lastdown,_)~_;
