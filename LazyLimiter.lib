@@ -72,10 +72,11 @@ slidemax(k,w) = smax(w) : pmax(k,w)
 
 Lookahead(x,lastdown,avgLevel) =
 // attackGRYann,
-attackGRrelative,
-// attackGR,
+// attackGRrelative,
+attackGR,
 // Yann_hold(x)
 // variable_hold(maxHoldTime,winSize,x)
+// block_hold_semivar(x)
 block_hold_var(x)
 // block_hold(x)
 // (fixed_hold(maxHoldTime,currentdown(x)):max(lastdown))
@@ -96,6 +97,7 @@ with {
       0:seq(i,maxSize,
        (((maxSize-i)<=(size))*(currentdown(x)@(i))),_: min
        // (((i+1)>(maxSize-size))*(currentdown(x)@(i))),_: min
+      // ):max(lastdown):min(currentdown(x)@maxHoldTime);
       ):max(lastdown);
 
     block_hold(x) = ( 0:seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize))),_:min )):max(lastdown);
@@ -110,7 +112,7 @@ with {
     ):max(lastdown);
 
   block_hold_var(x) =
-    ( 0:seq(i,int(maxHoldTime/maxWinSize),(variable_hold(maxWinSize,((decimal(winSize/maxWinSize))*maxWinSize),x)@(i*maxWinSize)*((int(winSize/maxWinSize)<i))),_:min )
+    ( 0:seq(i,int(maxHoldTime/maxWinSize),(variable_hold(maxWinSize,((decimal(winSize/maxWinSize))*maxWinSize),x)@(i*maxWinSize)*(((floor(winSize/maxWinSize)==i)))),_:min )
       :seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize)*((int(maxHoldTime/maxWinSize)-i)<=floor(winSize/maxWinSize)))),_:min )
     ):max(lastdown);
 
@@ -282,7 +284,10 @@ linearXfade(x,a,b) = a*(1-x),b*x : +;
 
 limiter(x) = (Lookahead(x):releaseEnv(minRelease))~_+(inGain@maxHoldTime):meter:db2linear *x@maxHoldTime;
 
-gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit:(min(currentdown(x)@maxHoldTime),_))~(_,_):(_,!);
+// gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit:(min(currentdown(x)@maxHoldTime),_))~(_,_):(_,!);
+// gainComputer(x) = (Lookahead(x):min(currentdown(x)@maxHoldTime))~(_,0);
+gainComputer(x) = (Lookahead(x))~(_,0);
+// gainComputer(x) = (0:min(currentdown(x)@maxHoldTime));
 //:min(currentdown(x)@maxHoldTime)// todo: remove this hack without getting overshoot
 //gainComputer(x) = (Lookahead(x):releaseEnv(minRelease)<:(_,rateLimit):linearXfade((link*-1)+1))~_<:(_,rateLimit):linearXfade(link);
 //gainComputer(x) = (Lookahead(x)<:(releaseEnv(minRelease),rateLimit):linearXfade(link))~_;
