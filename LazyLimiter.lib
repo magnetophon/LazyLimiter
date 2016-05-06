@@ -72,13 +72,13 @@ slidemax(k,w) = smax(w) : pmax(k,w)
 
 Lookahead(x,lastdown,avgLevel) =
 // attackGRYann,
-// attackGRrelative,
-attackGR,
+attackGRrelative,
+// attackGR,
 // Yann_hold(x)
 // variable_hold(maxHoldTime,winSize,x)
 // block_hold_semivar(x)
-block_hold_var(x)
-// block_hold(x)
+// block_hold_var(x)
+block_hold(x)
 // (fixed_hold(maxHoldTime,currentdown(x)):max(lastdown))
 // variable_hold(maxHoldTime,holdTime,x)
 :min//:min(currentdown(x)@maxHoldTime)// todo: remove this hack without getting overshoot
@@ -158,7 +158,7 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
       // the non-relative version tkes much less CPU, so can work with a much longer attack-time,
       // which does lower distorion (at least for linear attack)
       // oddly enough, with minimalStereoLimiter, the both variants use about the same amount of CPU
-    attackGRrelative =
+    attackGRrelativeOLD =
        (0: seq(i,maxAttackTime,
             // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i))*(((i+1)/maxAttackTime):attackShaperI(i)))+lastRel(i))),_: min
             ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i))*(((i+1)/maxAttackTime):attackShaper))+lastRel(i)):(_<:((_<lastRel(i) ),_):*)),_: min
@@ -167,12 +167,13 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
       // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i) )*(((i+1)/maxAttackTime):attackShaper))+lastRel(i))*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<lastdown)),_: min
        // ));
        ));
-    attackGRrelativeNew =
+    attackGRrelative =
        (0: seq(i,maxAttackTime,
-            ((lastdown+((currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*(((1)/maxAttackTime)))):(_<:((_<lastdown),_):*)),_: min
-            // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*(((i+1)/maxAttackTime):newshape))+lastdown):(_<:((_<lastdown),_):*)),_: min
+            // ((lastRel(i)+((currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*(((1)/maxAttackTime)))):(_<:((_<lastdown),_):*)),_: min
+            // ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastRel(i))*(((i+1)/maxAttackTime):attackShaper))+lastRel(i)):(_<:((_<lastdown),_):*)),_: min
+            ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*(((i+1)/maxAttackTime):newshape))+lastdown):(_<:((_<lastdown),_):*)),_: min
             // ((((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*((i+1)/maxAttackTime)/(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown):newshape)*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)))+lastdown):(_<:((_<lastdown),_):*)),_: min
-       ));
+       )):min(currentdown(x)@maxHoldTime);
        // newshape(s) = ((sin(((s)*PI)-(0.5*PI))+1)/2):pow(1+(attack*40));
        add =       hslider("add", 0, 0, 1, 0.001)/10;
        newshape(s) = s*(attack:pow(10));
@@ -183,6 +184,7 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
     // lastRel(i) = select2((lastdown<=lastdown'),lastdown,_)~_;
     // lastRel(i) = lastdown;
     lastRel(i) = lastdown@(i):max(lastdown);
+    // lastRel(i) = lastdown@(i):max(lastdown);
     // lastRel(i) = lastdown@(i-maxAttackTime+maxHoldTime); // stays down
     // lastRel(i) = select2((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)<=lastdown),lastdown,_)~_;
     // lastRel(i) = select2((currentdown(x)@(-maxAttackTime+maxHoldTime)>=currentdown(x)@(1-maxAttackTime+maxHoldTime)),lastdown,_)~_;
@@ -286,7 +288,7 @@ limiter(x) = (Lookahead(x):releaseEnv(minRelease))~_+(inGain@maxHoldTime):meter:
 
 // gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit:(min(currentdown(x)@maxHoldTime),_))~(_,_):(_,!);
 // gainComputer(x) = (Lookahead(x):min(currentdown(x)@maxHoldTime))~(_,0);
-gainComputer(x) = (Lookahead(x))~(_,0);
+gainComputer(x) = (Lookahead(x):releaseEnv(minRelease))~(_,0);
 // gainComputer(x) = (0:min(currentdown(x)@maxHoldTime));
 //:min(currentdown(x)@maxHoldTime)// todo: remove this hack without getting overshoot
 //gainComputer(x) = (Lookahead(x):releaseEnv(minRelease)<:(_,rateLimit):linearXfade((link*-1)+1))~_<:(_,rateLimit):linearXfade(link);
