@@ -14,7 +14,9 @@
 
 declare name      "LazyLimiter";
 declare author    "Bart Brouns";
-declare version   "0.3";
+declare version   "0.3.2";
+
+
 declare copyright "(C) 2014 Bart Brouns";
 
 import ("GUI.lib");

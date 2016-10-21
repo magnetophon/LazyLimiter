@@ -14,7 +14,9 @@
 
 declare name      "LazyLimiterBlockDiagram";
 declare author    "Bart Brouns";
-declare version   "0.3";
+declare version   "0.3.2";
+
+
 declare copyright "(C) 2014 Bart Brouns";
 
 import("stdfaust.lib");  //for ba.linear2db
@@ -33,7 +35,7 @@ GainCalculator(audio) = (minimumGainReduction(audio) : releaseEnvelope)~_;
 // not so great for educational purposes.
 minimumGainReduction(audio,lastdown) = ((attackGainReduction(audio) , hold(audio,lastdown)): min);
 
-attackGainReduction(audio) = 
+attackGainReduction(audio) =
 (
   currentdown(audio)@1*(1/4),
   currentdown(audio)@2*(2/4),
@@ -41,7 +43,7 @@ attackGainReduction(audio) =
   currentdown(audio)@4*(4/4)
 ): (min,min):min;
 
-hold(audio,lastdown) = 
+hold(audio,lastdown) =
 (
   (currentdown(audio)@(0):max(lastdown)),
   (currentdown(audio)@(1):max(lastdown)),
