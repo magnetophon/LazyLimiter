@@ -17,13 +17,12 @@ declare author    "Bart Brouns";
 declare version   "0.3";
 declare copyright "(C) 2014 Bart Brouns";
 
-import ("music.lib");  //for linear2db
-import ("effect.lib");  //for amp_follower
+import("stdfaust.lib");  //for ba.linear2db
+import("stdfaust.lib");  //for an.amp_follower
 import ("../GUI.lib");
 import ("../LazyLimiter.lib");
 
-
-process(audio) = GainCalculator(audio) : db2linear * audio@LookAheadTime;
+process(audio) = GainCalculator(audio) : ba.db2linear * audio@LookAheadTime;
 
 // just for visual indication in the blockdiagram. you can't actually change it and expect the code to work.
 LookAheadTime = 4;
@@ -51,4 +50,4 @@ hold(audio,lastdown) =
 ): (min,min):min;
 
 release = 0.1;
-releaseEnvelope = amp_follower(release);
+releaseEnvelope = an.amp_follower(release);

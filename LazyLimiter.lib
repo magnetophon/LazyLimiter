@@ -17,12 +17,12 @@ declare author    "Bart Brouns";
 declare version   "0.3";
 declare copyright "(C) 2014 Bart Brouns";
 
-import ("music.lib");  //for linear2db
-import("reduce.lib");
-com = library("../faustCompressors/compressors.lib");
+import("stdfaust.lib");
+import("slidingReduce.lib");
+
 //todo: mid-side, auto-release
 
-currentLevel(x)     = ((abs(x)):linear2db);
+currentLevel(x)     = ((abs(x)):ba.linear2db);
 currentdown(x)      = 0-(((currentLevel(x))-(threshold-inGain)):max(0));
 
 // smoothing function, 0 attack, release coefficient "r" and signal x
@@ -31,7 +31,7 @@ with {
     env (r, prevx, x)= select2( (x > prevx), x, (x*r)+(prevx * (1-r))     );
 };
 
-time_ratio_release(t) = exp(1) / ( t * SR);// * time_ratio_target_rel );
+time_ratio_release(t) = exp(1) / ( t * ma.SR);// * time_ratio_target_rel );
 
 // slidemin by Yann Orlarey, with variable_hold by Bart Brouns.
 // 2*k : number of windows, w : size of the window in samples
@@ -50,8 +50,7 @@ slidemin(k,w,x) = fixed_hold(w,x) : pmin(k,w)
       );
     smin(n) = F ~ (_,_) : !,_
       with {
-        F(k,m,x) = (k+1)%n, if(k==0, x, min(x,m));
-        if(c,t,e) = select2(c,e,t);
+        F(k,m,x) = (k+1)%n, ba.if(k==0, x, min(x,m));
       };
     pmin(1,w) = _ <: _ , @(w) : min;
     pmin(k,w) = _ <: pmin(1,w), (@(2*w) : pmin(k-1,w)) : min;
@@ -64,20 +63,17 @@ slidemax(k,w) = smax(w) : pmax(k,w)
   with {
     smax(n) = F ~ (_,_) : !,_
       with {
-        F(k,m,x) = (k+1)%n, if(k==0, x, max(x,m));
-        if(c,t,e) = select2(c,e,t);
+        F(k,m,x) = (k+1)%n, ba.if(k==0, x, max(x,m));
       };
     pmax(1,w) = _ <: _ , @(w) : max;
     pmax(k,w) = _ <: pmax(1,w), (@(2*w) : pmax(k-1,w)) : max;
   };
 
-binaryBlockDelayMin(N,maxN,x) = com.binaryBlockDelayOp(N,maxN,min,x);
-
 Lookahead(x,lastdown,avgLevel) =
-// attackGRYann,
+attackGRYann,
 // attackGRrelative,
 // attackGR,
-attackGRrelativeLin,
+// attackGRrelativeLin,
 // currentdown(x)@maxHoldTime,
 // Yann_hold(x)
 // variable_hold(maxHoldTime,winSize,x)
@@ -109,7 +105,7 @@ with {
 
     block_hold(x) = ( 0:seq(i,int(maxHoldTime/maxWinSize),((fixed_hold(maxWinSize,currentdown(x))@(i*maxWinSize))),_:min )):max(lastdown);
 
-    binary_block_hold(x) = binaryBlockDelayMin(maxHoldTime,maxHoldTime,currentdown(x)):max(lastdown);
+    binary_block_hold(x) = slidingMinN(winSize,maxHoldTime,currentdown(x)):max(lastdown);
 
   block_hold_semivar(x) =
     ( (0)
@@ -163,7 +159,7 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
        0: seq(i,maxAttackTime,
          (currentdown(x)@(i+1-maxAttackTime+maxHoldTime))*(((i+1)/maxAttackTime):attackShaper),_: min
        );
-      // in theory, attackGRrelative  should give lower distortion, since the gain curve is smooth.
+      // in theory, attackGRrelative  should give lower distortion, since the gain curve is si.smooth.
       // neither my ear nor measurements confirm this.
       // the non-relative version tkes much less CPU, so can work with a much longer attack-time,
       // which does lower distorion (at least for linear attack)
@@ -191,7 +187,7 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
             ((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*(((i+1)/maxAttackTime):newshape))+lastdown):(_<:((_<lastdown),_):*)),_: min
             // ((((((currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)*((i+1)/maxAttackTime)/(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown):newshape)*(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)-lastdown)))+lastdown):(_<:((_<lastdown),_):*)),_: min
        )):min(currentdown(x)@maxHoldTime);
-       // newshape(s) = ((sin(((s)*PI)-(0.5*PI))+1)/2):pow(1+(attack*40));
+       // newshape(s) = ((sin(((s)*ma.PI)-(0.5*ma.PI))+1)/2):pow(1+(attack*40));
        add =       hslider("add", 0, 0, 1, 0.001)/10;
        newshape(s) = s*(attack:pow(10));
        // newshape = ((_+add):pow(1+(attack*40)))-(add:pow(1+(attack*40)));
@@ -210,15 +206,15 @@ block_hold_va(size,block) = _ <: variable,par(i,int(rmsMaxSize/block), integrate
     // attackShaperI(i,fraction)= select2(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)>lastdown,attackShaperHalf(fraction),32/maxAttackTime);
     attackShaperI(i,fraction)= select2(currentdown(x)@(i+1-maxAttackTime+maxHoldTime)>lastdown,attackShaperHalf(fraction),((attackShaperHalf((fraction*-1)+1)*-1)+1));
     // attackShaper(fraction)= select2(currentdown(x)@maxHoldTime>lastdown,attackShaperHalf(fraction),((attackShaperHalf((fraction*-1)+1)*-1)+1));
-    attackShaper(fraction)= tanh(fraction:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
+    attackShaper(fraction)= ma.tanh(fraction:pow(attack:attackScale)*(attack*5+.1))/ma.tanh(attack*5+.1);
     // attackShaperLookup takes shorter to compile, but uses slightly more cpu than attackShaper, even though the later has a fixed attack shape.
-    attackShaperLookup(x)= rdtable(maxAttackTime, ( tanh((time/maxAttackTime):pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1)),int(x*maxAttackTime))
+    attackShaperLookup(x)= rdtable(maxAttackTime, ( ma.tanh((time/maxAttackTime):pow(attack:attackScale)*(attack*5+.1))/ma.tanh(attack*5+.1)),int(x*maxAttackTime))
       with { attack = 1; };
-    //attackShaper(x)= tanh(x:pow(attack:attackScale)*mult)/tanh(mult);
+    //attackShaper(x)= ma.tanh(x:pow(attack:attackScale)*mult)/ma.tanh(mult);
     //attackShaper(x)= x:pow(attack:attackScale);
     attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better
     };
-    //tanh(x^(32)*20)/tanh(20)
+    //ma.tanh(x^(32)*20)/ma.tanh(20)
 
 LookaheadPar(x,lastdown) =
 ( par(i,maxHoldTime,(((i+1)>(maxHoldTime-holdTime))*(currentdown(x)@(i):max(lastdown)))): seq(j,(log(maxHoldTime)/log(2)),par(k,maxHoldTime/(2:pow(j+1)),min))),
@@ -226,7 +222,7 @@ LookaheadPar(x,lastdown) =
 :min
 with {
     //attackShaper(x)= x:pow(attack:attackScale);//atan((gainHS+0.0001)*128*x)/atan((gainHS+0.0001)*128);
-    attackShaper(x)= tanh(x:pow(attack:attackScale)*(attack*5+.1))/tanh(attack*5+.1);
+    attackShaper(x)= ma.tanh(x:pow(attack:attackScale)*(attack*5+.1))/ma.tanh(attack*5+.1);
     attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better
 }
 ;
@@ -236,14 +232,13 @@ SMOOTH(a, r,  x) =
 	((x     *      select2( (x < _), a, r )) +
 	(_ * (1 - select2( (x < _), a, r)))) ~ (_<:_,_,_);
 
-
 /*rateLimiter(baserelease,prevx,x) = prevx+newtangent:min(0)*/
 /*with {*/
     /*newtangent  = select2(tangent>0,minus,plus);*/
     /*tangent     = x- prevx;*/
-    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(baserelease);*/
-    /*minus       = tangent;// if you have to go down, you have to go down!*/
-    /*avgChange   = (abs((tangent)-(tangent@1)):integrate(IM_size)*releaseMult:_+1:pow(releasePower)-1)/200:SMOOTH(attackAVG,0.0008):tanh*changeScale;*/
+    /*plus        = tangent*((abs(avgChange):mymeter*-1):ba.db2linear):min(baserelease);*/
+    /*minus       = tangent;// ba.if you have to go down, you have to go down!*/
+    /*avgChange   = (abs((tangent)-(tangent@1)):integrate(IM_size)*releaseMult:_+1:pow(releasePower)-1)/200:SMOOTH(attackAVG,0.0008):ma.tanh*changeScale;*/
        /*//select2(abs(tangent)>maxRate,tangent,maxRate);*/
     /*integrate(size,x) = delaysum(size, x)/size;*/
     /*delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;*/
@@ -255,7 +250,7 @@ with {
     tangent     = x- prevx;
   // this design reacts slower when the AVG is near 0dB GR versus when the AVG is lower, because there is no overshoot then.
   //therefore, we have a 24 dB inGain.
-  // todo: maybe slightly smooth the GR curve manually around 0dB GR (probably not needed)
+  // todo: maybe slightly si.smooth the GR curve manually around 0dB GR (probably not needed)
    plus        = (
      (baserelease)*
      (1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(antiPump:pow(2))*4):min(1)))*
@@ -263,12 +258,12 @@ with {
      ):min(tangent);
       //plus        = ((tangent*speed):max(baserelease)*(1-(((prevx - avgLevel )*((prevx - avgLevel )>0)*(antiPump:pow(2))):min(1))));
 //:min(baserelease)
-    minus       = tangent;// if you have to go down, you have to go down!
+    minus       = tangent;// ba.if you have to go down, you have to go down!
     speed       = abs(select2(prevx<avgLevel,aboveAvg,belowAvg)):min(0.5):mymeter;
     avgLevel    = prevx:SMOOTH(releaseAVG,attackAVG):avgMeter;
-    belowAvg    = ((abs(x - avgLevel ) )*releaseMult:_+1:pow(releasePower)-1)/200:tanh:pow(transientSpeed);
+    belowAvg    = ((abs(x - avgLevel ) )*releaseMult:_+1:pow(releasePower)-1)/200:ma.tanh:pow(transientSpeed);
     aboveAvg    = 0;
-    //avgChange   = (abs(x-(integrate(IM_size,prevx):SMOOTH(attackAVG,releaseAVG)))*releaseMult:_+1:pow(releasePower)-1)/200:tanh*changeScale;
+    //avgChange   = (abs(x-(integrate(IM_size,prevx):SMOOTH(attackAVG,releaseAVG)))*releaseMult:_+1:pow(releasePower)-1)/200:ma.tanh*changeScale;
        //select2(abs(tangent)>maxRate,tangent,maxRate);
     integrate(size,x) = delaysum(size, x)/size;
     delaysum(size) = _ <: par(i,rmsMaxSize, @(i)*(i<size)) :> _;
@@ -278,9 +273,9 @@ with {
 /*with {*/
     /*newtangent  = select2(tangent>0,minus,plus);*/
     /*tangent     = x- prevx;*/
-    /*plus        = tangent*((abs(avgChange):mymeter*-1):db2linear):min(baserelease);*/
-    /*minus       = tangent;// if you have to go down, you have to go down!*/
-    /*avgChange   = (tangent:nrSignChange(IM_size)*releaseMult+1:pow(releasePower)-1)/200:SMOOTH(attackAVG,0.0008):tanh*changeScale;*/
+    /*plus        = tangent*((abs(avgChange):mymeter*-1):ba.db2linear):min(baserelease);*/
+    /*minus       = tangent;// ba.if you have to go down, you have to go down!*/
+    /*avgChange   = (tangent:nrSignChange(IM_size)*releaseMult+1:pow(releasePower)-1)/200:SMOOTH(attackAVG,0.0008):ma.tanh*changeScale;*/
        /*//select2(abs(tangent)>maxRate,tangent,maxRate);*/
     /*nrSignChange(size)  = _ <: par(i,rmsMaxSize, signChange(i,size)) :> _/size;*/
     /*//signChange(i,x) = ( ((x@(i)>0) && (x@(i+1)<0)));*/
@@ -290,17 +285,17 @@ with {
     /*};*/
 
 time_ratio_target_atk = 8.0;
-time_ratio_attack(t) = exp(1) / ( t * SR * time_ratio_target_atk );
+time_ratio_attack(t) = exp(1) / ( t * ma.SR * time_ratio_target_atk );
 
 rateLimit = ( rateLimiter(baserelease) ~ (_,!):(_,_));
 
 releaseMult      = (hslider("[3]releaseMult[tooltip: ]", 1 , 0, 10 , 0.001)*100);
 releasePower     = (hslider("[4]releasePower[tooltip: ]", 1, 0, 5 , 0.001));
-IM_size        = (hslider("[5]IM_size[tooltip: ]",256, 1,   rmsMaxSize,   1)*44100/SR); //0.0005 * min(192000.0, max(22050.0, SR));
+IM_size        = (hslider("[5]IM_size[tooltip: ]",256, 1,   rmsMaxSize,   1)*44100/ma.SR); //0.0005 * min(192000.0, max(22050.0, ma.SR));
 
 linearXfade(x,a,b) = a*(1-x),b*x : +;
 
-limiter(x) = (Lookahead(x):releaseEnv(minRelease))~_+(inGain@maxHoldTime):meter:db2linear *x@maxHoldTime;
+limiter(x) = (Lookahead(x):releaseEnv(minRelease))~_+(inGain@maxHoldTime):meter:ba.db2linear *x@maxHoldTime;
 
 // gainComputer(x) = (Lookahead(x):releaseEnv(minRelease):rateLimit:(min(currentdown(x)@maxHoldTime),_))~(_,_):(_,!);
 // gainComputer(x) = (Lookahead(x):min(currentdown(x)@maxHoldTime))~(_,0);
@@ -314,7 +309,7 @@ gainComputer(x) = (Lookahead(x):releaseEnv(minRelease))~(_,0);
 stereoGainComputerHalf (x,y,prevy,avgLevely) =
   (
     ((Lookahead(x)<:_,_):((_,(_,((prevy,avgLevely):Lookahead(y)):min)):linearXfade(link)):releaseEnv(minRelease):(rateLimit))
-    ~(bus(2))
+    ~(si.bus(2))
   );
 
   /*(*/
@@ -322,12 +317,10 @@ stereoGainComputerHalf (x,y,prevy,avgLevely) =
     /*~((Lookahead(x)<:_,_),_):(_,!)*/
   /*);*/
 
-stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((cross(2),cross(2)):cross(4)):(_,!,_,!);
+stereoGainComputer(x,y) = (stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((ro.cross(2),ro.cross(2)):ro.cross(4)):(_,!,_,!);
 //(stereoGainComputerHalf(x,y),stereoGainComputerHalf(y,x))~((_,_ <: !,_,_,!),_);
 
-
-
-stereoLimiter(x,y)  = (stereoGainComputer(x,y) : (((meter:_+(inGain@maxHoldTime):db2linear)*x@maxHoldTime,((meter:_+(inGain@maxHoldTime):db2linear)*y@maxHoldTime)))),(stereoGainComputer(x,y):par(i, 2, db2linear ));
+stereoLimiter(x,y)  = (stereoGainComputer(x,y) : (((meter:_+(inGain@maxHoldTime):ba.db2linear)*x@maxHoldTime,((meter:_+(inGain@maxHoldTime):ba.db2linear)*y@maxHoldTime))));
 
 //faust2jaqt -t 999999 -time -sch -vs 4096 -mcd 8192 LazyLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
@@ -336,15 +329,14 @@ stereoLimiter(x,y)  = (stereoGainComputer(x,y) : (((meter:_+(inGain@maxHoldTime)
 //faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LazyLimiter.dsp  485.55s
 //maxHoldTime = 1024 maxAttackTime = 1024
 //jack: 80% CPU
-simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y):releaseEnv(minRelease))):min)~(_<:(_,_))+(inGain@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
+simpleStereoLimiter(x,y) = (((Lookahead(x):releaseEnv(minRelease)),(Lookahead(y):releaseEnv(minRelease))):min)~(_<:(_,_))+(inGain@maxHoldTime):meter:ba.db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 
-//simpleStereoLimiter(x,y) = (LookaheadPar(x),LookaheadPar(y):min:releaseEnv(minRelease))~(_<:(_,_))+(inGain@maxHoldTime):meter:db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
-
+//simpleStereoLimiter(x,y) = (LookaheadPar(x),LookaheadPar(y):min:releaseEnv(minRelease))~(_<:(_,_))+(inGain@maxHoldTime):meter:ba.db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime);
 
 //faust2jaqt -t 999999 -time -sch -vs 2048 -mcd 4096 LazyLimiter.dsp
 //maxHoldTime = 1024 maxAttackTime = 1024
 //jack: 52% CPU  169.49s
 //maxHoldTime = 2048 maxAttackTime = 1024
 //jack: 52% CPU 485.55s
-naiveStereoLimiter(x,y) = ((gainComputer(x),gainComputer(y)):min:meter+(inGain@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime)),((gainComputer(x),gainComputer(y)):par(i, 2, db2linear));
-minimalStereoLimiter(x,y) = (gainComputer((abs(x),abs(y)):max):meter+(inGain@maxHoldTime):db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime)),(gainComputer((abs(x),abs(y)):max):db2linear),((((abs(x),abs(y)):max)@maxHoldTime)*db2linear(-18));
+naiveStereoLimiter(x,y) = ((gainComputer(x),gainComputer(y)):min:meter+(inGain@maxHoldTime):ba.db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime)),((gainComputer(x),gainComputer(y)):par(i, 2, ba.db2linear));
+minimalStereoLimiter(x,y) = (gainComputer((abs(x),abs(y)):max):meter+(inGain@maxHoldTime):ba.db2linear<:(_*x@maxHoldTime,_*y@maxHoldTime)),(gainComputer((abs(x),abs(y)):max):ba.db2linear),((((abs(x),abs(y)):max)@maxHoldTime)*ba.db2linear(-18));
