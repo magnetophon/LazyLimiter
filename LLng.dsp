@@ -24,7 +24,7 @@ t= vslider("time", 0, 0, 1, 0.001);
 // reset at rampTime == LookAheadTime
 // save at minGR < target
 // from save do line of LookAheadTime long
-currentLine(GR)
+// currentLine(GR)
 
 minGRdelta(GR) =
   minGRdeltaFB(GR)~_
