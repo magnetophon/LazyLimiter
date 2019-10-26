@@ -15,46 +15,49 @@ maxmsp = library("maxmsp.lib");
 // process = minN(15);
 // process = par(i, 8, minN(i));
 process =
-  // (minGRdelta(GR))
-  // ,
-  // GR@LookAheadTime
   GR@pow(2,expo)
+// ,(minGRdelta(GR))
+// GR@LookAheadTime
 // ,lowestGR(GR)
-// ,line(lowestGR(GR),LookAheadTime)
+,line(lowestGR(GR),LookAheadTime)
 // ,(line(GR:ba.slidingMinN(pow(2,4),pow(2,1)) , pow(2,1) ))
- ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
+// ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
 // ,(line(GR:ba.slidingMinN(pow(2,expo-1),pow(2,expo-1)) , pow(2,expo-1) )@(pow(2,expo)-pow(2,expo-1)))
 // ,minGRdelta(GR)
 // ,((((os.lf_trianglepos(4)*LookAheadTime) +1)/LookAheadTime):min(1):attackShaper)
- ,deltaGR(LookAheadTime,lowestGR(GR))
- ,ramp(LookAheadTime,lowestGR(GR))
+,deltaGR(LookAheadTime,GR)
+// ,ramp(pow(2,1+1),GR:ba.slidingMinN(pow(2,1+1),pow(2,1+1)))/pow(2,4)
+// ,FBdeltaGR(LookAheadTime,GR)
 ;
 
 // expo = 4;
-expo = 8;
-// expo = 13;
+// expo = 8;
+expo = 13;
 
 
 // Starts counting up from 0 to n included. While trig is 1 the output is 0.
 // The countup starts with the transition of trig from 1 to 0. At the end
 // of the countup the output value will remain at n until the next trig.
+// deltaGR(maxI,GR) = (FBdeltaGR(maxI,GR)~(_,!)):(_',_)
 deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
 ;
 // with {
 // };
 
-FBdeltaGR(maxI,GR,FB) = (GR-FB)/((maxI-ramp(maxI,GR))+1);
+FBdeltaGRsingle(maxI,GR,FB) = ((lowestGR(GR)-FB)/((maxI-ramp(maxI,lowestGR(GR)))+1))+FB ;
+// FBdeltaGR(maxI,GR,FB) = ((GR-FB)/((maxI-ramp(maxI,GR))+1)) <: (_+FB,_);
+FBdeltaGR(maxI,GR,FB) =
+  par(i, expo,
+      ((GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1))@(pow(2,expo)-pow(2,i+1))-FB)
+        /((pow(2,i+1)-ramp(pow(2,i+1),GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1))@(pow(2,expo)-pow(2,i+1))))+1))
+  )
+  :minN(expo) +FB
+// :(par(i, expo-1, !),_)+FB
+// :(par(i, expo-2, !),_,!)+FB
+;
 ramp(maxI,GR) = ba.countup(maxI,(GR-GR')!=0);
 
 
-
-minGRdelta2(GR) =
-  minGRdeltaFB(GR)~_
-with {
-  GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(LookAheadTime-i+1);
-  // GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(((((LookAheadTime-i+1)/LookAheadTime):min(1):attackShaper)*LookAheadTime));
-  minGRdeltaFB(GR,FB) = par(i, LookAheadTime+1, GRdeltaFB(GR,i,FB)):minN(LookAheadTime+1)+FB;
-};
 
 // LookAheadTime = 127;
 // LookAheadTime = 4096;
