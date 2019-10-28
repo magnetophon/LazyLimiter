@@ -24,18 +24,25 @@ with {
     par(i, expo,
         ((lowestGR(i)-FB)
           /((powI(i)-ramp(powI(i),lowestGR(i)))+1))
-// * speedFactor(i,FB)
+        : attackRelease(i,FB)
     )
     :minN(expo) +FB;
   ramp(maxI,GR) = ba.countup(maxI,(GR-GR')!=0);
   powI(i) = pow(2,i+1);
   delComp(i) = pow(2,expo)-powI(i);
   lowestGR(i) = GR:ba.slidingMinN(powI(i),powI(i))@delComp(i);
-  speedFactor(i,FB) =
-    select2(FB>FB',
-            (1/(i+1))*speed : min(1),
-            (  (i+1))*speed : min(1));
-  speed = (((hslider("speed", 0, 0, 1, 0.001)*-1)+1)*pow(2,expo))+1;
+  // attackRelease(i,FB) =
+  //   select2(FB>FB',
+  //           (1/(i+1))*speed : min(1),
+  //           (  (i+1))*speed : min(1));
+  // speed = (((hslider("speed", 0, 0, 1, 0.001)*-1)+1)*pow(2,expo))+1;
+  attackRelease(i,FB,delta) =
+    select2((delta+FB)<=FB,
+            1+release,
+            (1/(i+1))+attack : min(1))*delta;
+  // (1/(i+1))-attack : min(1));
+  attack =  hslider("attack",  0, 0, 1, 0.001)*32;
+  release = ((hslider("release", 0, 0, 1, 0.001)*-1)+1)*32;
 };
 
 
@@ -58,7 +65,7 @@ lowestGR(GR) = GR:ba.slidingMinN(LookAheadTime,LookAheadTime);
 
 
 GR = no.lfnoise0(LookAheadTime *t * (no.lfnoise0(LookAheadTime/2):max(0.1) ) ):pow(3):min(0);//(no.noise:min(0)):ba.sAndH(t)
-t= vslider("time", 0, 0, 1, 0.001);
+t= hslider("time", 0, 0, 1, 0.001);
 
 
 
