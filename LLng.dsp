@@ -28,7 +28,9 @@ with {
           /((powI(i)-ramp(powI(i),lowestGRi(i,GR)))+1))
         : attackRelease(i,FB)
     )
-    :minN(expo) +FB;
+    : minN(expo) +FB
+    : smoother(length)
+  ;
   // countup(n,trig) : _
   // * `n`: the maximum count value
   // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
@@ -45,13 +47,38 @@ with {
             1+release,
             // (1/(i+1))+attack : min(1)
             // (1/((multi*((i-5))):max(1)))+pow(attack,powerSL) : min(1)
-            (1/(pow(((i-5):max(1)),2)))+pow(attack,powerSL) : min(1)
+            // (1/(pow(((i-5):max(1)),2)))+pow(attack,powerSL) : min(1)
+            (1/
+              ( pow(((i-3):max(1)),2.5) )
+            ) + pow(attack,2) : min(1)
 // 1
     )*delta;
   // (1/(i+1))-attack : min(1));
   attack =  hslider("attack",  0, 0, 1, 0.001);
-  release = ((hslider("release", 0, 0, 1, 0.001)*-1)+1)*8;
+  release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*32;
 };
+// auto-attack-release:
+// vocoder, each band represents a fixed A&R, (lower is longer of course)
+// and each influences the end result
+// use VOF code to normalise and focus
+
+// if (somewhere in the next "length" samples, we are going down quicker then we are now):
+// then (fade down to that speed)
+// second implementation option:
+// if knikpunt
+// then (fade down to 0 speed at knikpunt, then "normal release")
+length = pow(2,7); // 128
+smoother(length,x) = smootherFB(x)~_ ;
+smootherFB(x,FB) = x;
+detaGR(GR) = GR-GR';
+minDeltaGR(GR) = deltaGR(GR):slidingMinN(length,length);
+
+// similar thing for the attack-corner:
+// GRlong = slidingMinN(GR,attacklength); // to almost reach the trought earlier
+// if (somewhere in the next "length" samples, we are going up quicker then we are now):
+// then (fade up to that speed)
+
+linPart = hslider("linPart", 5, 1, 8, 1);
 
 powI(i) = pow(2,i+1);
 delComp(i) = pow(2,expo)-powI(i);
