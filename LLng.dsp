@@ -7,30 +7,34 @@ maxmsp = library("maxmsp.lib");
 
 // process(x) = (gainCalculator(x):ba.db2linear)*(x@LookAheadTime);
 process =
-GR@LookAheadTime
-,line(lowestGR(GR),LookAheadTime)
+  GR@LookAheadTime
+ ,line(lowestGRi(5,GR),pow(2,6)) // @(LookAheadTime-pow(2,7))
+ ,line(lowestGR(GR),LookAheadTime)
 // ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
 // ,((((os.lf_trianglepos(4)*LookAheadTime) +1)/LookAheadTime):min(1):attackShaper)
-,deltaGR(LookAheadTime,GR)
+ ,deltaGR(LookAheadTime,GR)
 ;
 
 // expo = 4;
 // expo = 8;
-expo = 13;
+expo = 10;
+// expo = 13; // 13 = 8192 samples, = 0.185759637188 sec = 186ms
 
 deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
 with {
   FBdeltaGR(maxI,GR,FB) =
     par(i, expo,
-        ((lowestGR(i)-FB)
-          /((powI(i)-ramp(powI(i),lowestGR(i)))+1))
+        ((lowestGRi(i,GR)-FB)
+          /((powI(i)-ramp(powI(i),lowestGRi(i,GR)))+1))
         : attackRelease(i,FB)
     )
     :minN(expo) +FB;
-  ramp(maxI,GR) = ba.countup(maxI,(GR-GR')!=0);
-  powI(i) = pow(2,i+1);
-  delComp(i) = pow(2,expo)-powI(i);
-  lowestGR(i) = GR:ba.slidingMinN(powI(i),powI(i))@delComp(i);
+  // countup(n,trig) : _
+  // * `n`: the maximum count value
+  // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
+  // ramp(maxI,GR) = ((ba.countup(maxI,(GR-GR')!=0)/maxI):attackShaper)*maxI;
+  ramp(maxI,GR) =   ba.countup(maxI,(GR-GR')!=0);
+  //
   // attackRelease(i,FB) =
   //   select2(FB>FB',
   //           (1/(i+1))*speed : min(1),
@@ -39,12 +43,21 @@ with {
   attackRelease(i,FB,delta) =
     select2((delta+FB)<=FB,
             1+release,
-            (1/(i+1))+attack : min(1))*delta;
+            // (1/(i+1))+attack : min(1)
+            // (1/((multi*((i-5))):max(1)))+pow(attack,powerSL) : min(1)
+            (1/(pow(((i-5):max(1)),2)))+pow(attack,powerSL) : min(1)
+// 1
+    )*delta;
   // (1/(i+1))-attack : min(1));
-  attack =  hslider("attack",  0, 0, 1, 0.001)*32;
-  release = ((hslider("release", 0, 0, 1, 0.001)*-1)+1)*32;
+  attack =  hslider("attack",  0, 0, 1, 0.001);
+  release = ((hslider("release", 0, 0, 1, 0.001)*-1)+1)*8;
 };
 
+powI(i) = pow(2,i+1);
+delComp(i) = pow(2,expo)-powI(i);
+lowestGRi(i,GR) = GR:ba.slidingMinN(powI(i),powI(i))@delComp(i);
+powerSL = 2;//hslider("pow", 1, 1, 8, 1);
+multi = 6; // hslider("multi", 6, 1, 12, 0.01);
 
 // LookAheadTime = 127;
 // LookAheadTime = 4096;
