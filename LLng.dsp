@@ -7,13 +7,13 @@ maxmsp = library("maxmsp.lib");
 
 // process(x) = (gainCalculator(x):ba.db2linear)*(x@LookAheadTime);
 process =
-  GR@(LookAheadTime+length)
- ,GRlong@(LookAheadTime)
-// ,line(lowestGRi(5,GR),pow(2,6)) // fast fade
- ,line(lowestGR(GR),LookAheadTime)@length
-// ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
-// ,((((os.lf_trianglepos(4)*LookAheadTime) +1)/LookAheadTime):min(1):attackShaper)
- ,deltaGR(LookAheadTime,GRlong)
+  GR@(LookAheadTime)
+  // ,GRlong@(LookAheadTime)
+  ,line(lowestGRi(5,GR),pow(2,6)) // fast fade
+  ,line(lowestGR(GR),LookAheadTime) // slow fade
+   // ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
+   // ,((((os.lf_trianglepos(4)*LookAheadTime) +1)/LookAheadTime):min(1):attackShaper)
+  ,deltaGR(LookAheadTime,GR)
 ;
 
 // expo = 4;
