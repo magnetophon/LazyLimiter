@@ -30,10 +30,16 @@ with {
             / ((powI(i)-ramp(powI(i),lowestGRi(i,GR)))+1)
         )
         : attackRelease(i,FB)
-    )
-    : minN(expo) +FB
+       )
+    : ((minN(expo) :smoothie ) +FB)
+// :min(0)
+    :min(GR@LookAheadTime)
+
     : smoother(length)
   ;
+  smoothie(delta) = select2(delta>=0,delta,smoothieFB(delta)~_);
+  smoothieFB(delta,FB) = min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta);
+  smoo = hslider("smoo", 0, 0, 1, 0.01):pow(1/16);
   // countup(n,trig) : _
   // * `n`: the maximum count value
   // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
@@ -50,26 +56,28 @@ with {
             releaseFunc,
             // (1/(i+1))+attack : min(1)
             attackFunc(i)
-    )*delta;
-  releaseFunc = 1+release;
+           )*delta;
+  releaseFunc =  1+release;
+  // releaseFunc(delta) = min((delta*smoo)+( (1+release)  *(1-smoo)));
   attackFunc(i) =
     (
       (
         1/
-          ( pow(( (i-curve):max(1)) , 2.5) ) // linear from i=4
-          // ) + pow(attack,2) : min(1)
-          // ) + pow(attack,2) : min(1)+ ((i==3)*1) + ((i==1)*-0.75)
-      ) + pow(attack,2) : min(1)+ ((i==curve)*1) + ((i==(curve-2))*-0.75)
+        ( pow(( (i-curve):max(1)) , 2.5) ) // linear from i=4
+        // ) + pow(attack,2) : min(1)
+        // ) + pow(attack,2) : min(1)+ ((i==3)*1) + ((i==1)*-0.75)
+      ) + pow(attack,2) : min(1)+ ((i==curve)*1)
+                          //+ ((i==(curve-2))*-0.75)
     )
-;
-curve = hslider("curve", 3, 2, expo, 1);
-// (1/(i+1))-attack : min(1));
-attack =  hslider("attack",  0, 0, 1, 0.001);
-// OK for expo=10
-// release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*32;
-// OK for 10 and 13
-// release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo/2);
-release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo)/32;
+                  ;
+                  curve = hslider("curve", 3, 2, expo, 1);
+                  // (1/(i+1))-attack : min(1));
+                  attack =  hslider("attack",  0, 0, 1, 0.001);
+                  // OK for expo=10
+                  // release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*32;
+                  // OK for 10 and 13
+                  release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo/2);
+                  // release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo)/32;
 };
 
 // lin from 32 (i=4)
@@ -125,36 +133,36 @@ lowestGR(GR) = GR:ba.slidingMinN(LookAheadTime,LookAheadTime);
 
 
 GR = no.lfnoise0(LookAheadTime *t * (no.lfnoise0(LookAheadTime/2):max(0.1) )):pow(3)*(1-noiseLVL) +(no.lfnoise(rate):pow(3) *noiseLVL):min(0);//(no.noise:min(0)):ba.sAndH(t)
-t= hslider("time", 0, 0, 1, 0.001);
-noiseLVL = hslider("noise", 0, 0, 1, 0.01);
-rate = hslider("rate", 20, 10, 20000, 10);
+                                                                                                                                       t= hslider("time", 0, 0, 1, 0.001);
+                                                                                                                                       noiseLVL = hslider("noise", 0, 0, 1, 0.01);
+                                                                                                                                       rate = hslider("rate", 20, 10, 20000, 10);
 
 
 
-minGRdelta(GR) =
-  minGRdeltaFB(GR)~_
-with {
-  GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(LookAheadTime-i+1);
-  // GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(((((LookAheadTime-i+1)/LookAheadTime):min(1):attackShaper)*LookAheadTime));
-  minGRdeltaFB(GR,FB) = par(i, LookAheadTime+1, GRdeltaFB(GR,i,FB)):minN(LookAheadTime+1)+FB;
-};
+                                                                                                                                       minGRdelta(GR) =
+                                                                                                                                         minGRdeltaFB(GR)~_
+                                                                                                                                       with {
+                                                                                                                                         GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(LookAheadTime-i+1);
+                                                                                                                                         // GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(((((LookAheadTime-i+1)/LookAheadTime):min(1):attackShaper)*LookAheadTime));
+                                                                                                                                         minGRdeltaFB(GR,FB) = par(i, LookAheadTime+1, GRdeltaFB(GR,i,FB)):minN(LookAheadTime+1)+FB;
+                                                                                                                                       };
 
-minN(n) = opWithNInputs(min,n);
+                                                                                                                                       minN(n) = opWithNInputs(min,n);
 
-// opWithNInputs(op,n) = seq(j,(log(n)/log(2)),par(k,n/(2:pow(j+1)),op));
-opWithNInputs =
-  case {
-    (op,0) => 0:!;
-      (op,1) => _;
-    (op,2) => op;
-    // (op,N) => (opWithNInputs(op,N/2),opWithNInputs(op,N/2)) : op;
-    (op,N) => (opWithNInputs(op,nUp(N)),opWithNInputs(op,nDown(N))) : op with {
-      nDown(N) = int(floor( N/2));
-      nUp(N)   = int(floor((N/2)+0.5));
-    };
-  };
+                                                                                                                                       // opWithNInputs(op,n) = seq(j,(log(n)/log(2)),par(k,n/(2:pow(j+1)),op));
+                                                                                                                                       opWithNInputs =
+                                                                                                                                         case {
+                                                                                                                                           (op,0) => 0:!;
+                                                                                                                                           (op,1) => _;
+                                                                                                                                           (op,2) => op;
+                                                                                                                                           // (op,N) => (opWithNInputs(op,N/2),opWithNInputs(op,N/2)) : op;
+                                                                                                                                           (op,N) => (opWithNInputs(op,nUp(N)),opWithNInputs(op,nDown(N))) : op with {
+                                                                                                                                             nDown(N) = int(floor( N/2));
+                                                                                                                                             nUp(N)   = int(floor((N/2)+0.5));
+                                                                                                                                           };
+                                                                                                                                         };
 
-gainCalculator(x) = x;
-attack                  = (hslider("[2]attack shape[tooltip: 0 gives a linear attack (slow), 1 a strongly exponential one (fast)]", 1 , 0, 1 , 0.001));
-attackShaper(fraction)= ma.tanh(fraction:pow(attack:attackScale)*(attack*5+.1))/ma.tanh(attack*5+.1);
-attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better
+                                                                                                                                       gainCalculator(x) = x;
+                                                                                                                                       attack                  = (hslider("[2]attack shape[tooltip: 0 gives a linear attack (slow), 1 a strongly exponential one (fast)]", 1 , 0, 1 , 0.001));
+                                                                                                                                       attackShaper(fraction)= ma.tanh(fraction:pow(attack:attackScale)*(attack*5+.1))/ma.tanh(attack*5+.1);
+                                                                                                                                       attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better
