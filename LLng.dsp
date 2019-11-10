@@ -7,12 +7,13 @@ maxmsp = library("maxmsp.lib");
 
 // process(x) = (gainCalculator(x):ba.db2linear)*(x@LookAheadTime);
 process =
-  GR@LookAheadTime
- ,line(lowestGRi(5,GR),pow(2,6)) // @(LookAheadTime-pow(2,7))
- ,line(lowestGR(GR),LookAheadTime)
+  GR@(LookAheadTime+length)
+ ,GRlong@(LookAheadTime)
+// ,line(lowestGRi(5,GR),pow(2,6)) // fast fade
+ ,line(lowestGR(GR),LookAheadTime)@length
 // ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
 // ,((((os.lf_trianglepos(4)*LookAheadTime) +1)/LookAheadTime):min(1):attackShaper)
- ,deltaGR(LookAheadTime,GR)
+ ,deltaGR(LookAheadTime,GRlong)
 ;
 
 // expo = 4;
@@ -24,8 +25,10 @@ deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
 with {
   FBdeltaGR(maxI,GR,FB) =
     par(i, expo,
-        ((lowestGRi(i,GR)-FB)
-          /((powI(i)-ramp(powI(i),lowestGRi(i,GR)))+1))
+        (
+          (lowestGRi(i,GR)-FB)
+            / ((powI(i)-ramp(powI(i),lowestGRi(i,GR)))+1)
+        )
         : attackRelease(i,FB)
     )
     : minN(expo) +FB
@@ -43,20 +46,37 @@ with {
   //           (  (i+1))*speed : min(1));
   // speed = (((hslider("speed", 0, 0, 1, 0.001)*-1)+1)*pow(2,expo))+1;
   attackRelease(i,FB,delta) =
-    select2((delta+FB)<=FB,
-            1+release,
+    select2((delta+FB)<=FB, // TODO we don't need FB!
+            releaseFunc,
             // (1/(i+1))+attack : min(1)
-            // (1/((multi*((i-5))):max(1)))+pow(attack,powerSL) : min(1)
-            // (1/(pow(((i-5):max(1)),2)))+pow(attack,powerSL) : min(1)
-            (1/
-              ( pow(((i-3):max(1)),2.5) )
-            ) + pow(attack,2) : min(1)
-// 1
+            attackFunc(i)
     )*delta;
-  // (1/(i+1))-attack : min(1));
-  attack =  hslider("attack",  0, 0, 1, 0.001);
-  release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*32;
+  releaseFunc = 1+release;
+  attackFunc(i) =
+    (
+      (
+        1/
+          ( pow(( (i-curve):max(1)) , 2.5) ) // linear from i=4
+          // ) + pow(attack,2) : min(1)
+          // ) + pow(attack,2) : min(1)+ ((i==3)*1) + ((i==1)*-0.75)
+      ) + pow(attack,2) : min(1)+ ((i==curve)*1) + ((i==(curve-2))*-0.75)
+    )
+;
+curve = hslider("curve", 3, 2, expo, 1);
+// (1/(i+1))-attack : min(1));
+attack =  hslider("attack",  0, 0, 1, 0.001);
+// OK for expo=10
+// release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*32;
+// OK for 10 and 13
+// release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo/2);
+release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo)/32;
 };
+
+// lin from 32 (i=4)
+// *2 from 16-8
+// *1 from 8-4
+// *0.25 from 4-0
+
 // auto-attack-release:
 // vocoder, each band represents a fixed A&R, (lower is longer of course)
 // and each influences the end result
@@ -67,14 +87,16 @@ with {
 // second implementation option:
 // if knikpunt
 // then (fade down to 0 speed at knikpunt, then "normal release")
-length = pow(2,7); // 128
+// length = pow(2,6); // 64
+// TODO: remove this length mess & delay! :)
+length = 2;
 smoother(length,x) = smootherFB(x)~_ ;
-smootherFB(x,FB) = x;
+smootherFB(x,FB) = (x); // attackBottom(x);
 detaGR(GR) = GR-GR';
 minDeltaGR(GR) = deltaGR(GR):slidingMinN(length,length);
 
 // similar thing for the attack-corner:
-// GRlong = slidingMinN(GR,attacklength); // to almost reach the trought earlier
+GRlong = GR:ba.slidingMinN(length,length); // to almost reach the trought earlier
 // if (somewhere in the next "length" samples, we are going up quicker then we are now):
 // then (fade up to that speed)
 
@@ -83,8 +105,6 @@ linPart = hslider("linPart", 5, 1, 8, 1);
 powI(i) = pow(2,i+1);
 delComp(i) = pow(2,expo)-powI(i);
 lowestGRi(i,GR) = GR:ba.slidingMinN(powI(i),powI(i))@delComp(i);
-powerSL = 2;//hslider("pow", 1, 1, 8, 1);
-multi = 6; // hslider("multi", 6, 1, 12, 0.01);
 
 // LookAheadTime = 127;
 // LookAheadTime = 4096;
@@ -104,8 +124,10 @@ with {
 lowestGR(GR) = GR:ba.slidingMinN(LookAheadTime,LookAheadTime);
 
 
-GR = no.lfnoise0(LookAheadTime *t * (no.lfnoise0(LookAheadTime/2):max(0.1) ) ):pow(3):min(0);//(no.noise:min(0)):ba.sAndH(t)
+GR = no.lfnoise0(LookAheadTime *t * (no.lfnoise0(LookAheadTime/2):max(0.1) )):pow(3)*(1-noiseLVL) +(no.lfnoise(rate):pow(3) *noiseLVL):min(0);//(no.noise:min(0)):ba.sAndH(t)
 t= hslider("time", 0, 0, 1, 0.001);
+noiseLVL = hslider("noise", 0, 0, 1, 0.01);
+rate = hslider("rate", 20, 10, 20000, 10);
 
 
 
