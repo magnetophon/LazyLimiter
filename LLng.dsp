@@ -2,21 +2,23 @@ declare name    "LazyLimiter ng";
 declare author  "Bart Brouns";
 declare license "GPLv3";
 declare version "0.1";
+
 import("stdfaust.lib");
 maxmsp = library("maxmsp.lib");
 
 // process(x) = (gainCalculator(x):ba.db2linear)*(x@LookAheadTime);
 process =
-GR@(LookAheadTime+length)
-// ,GRlong@(LookAheadTime)
-,line(lowestGRi(5,GR),pow(2,6))@length // fast fade
-,line(lowestGR(GR),LookAheadTime)@length // slow fade
+
+  GR@(LookAheadTime+length)
+  // ,GRlong@(LookAheadTime)
+ ,line(lowestGRi(5,GR),pow(2,6))@length // fast fade
+ ,line(lowestGR(GR),LookAheadTime)@length // slow fade
 // ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
 // ,((((os.lf_trianglepos(4)*LookAheadTime) +1)/LookAheadTime):min(1):attackShaper)
- // ,(deltaGR(LookAheadTime,GR)  <: (_-_') : (_*ma.SR/1000)  :ba.slidingMinN(length,length))
- // ,(deltaGR(LookAheadTime,GR) : smoother(length) <: (_-_') : (_*ma.SR/1000)  <: ((_:ba.slidingMinN(length,length))<_@length))
- // ,(deltaGR(LookAheadTime,GR)  <: (del) : (_*ma.SR/1000) : (_@length) )
-,deltaGR(LookAheadTime,GR)@length
+// ,(deltaGR(LookAheadTime,GR)  <: (_-_') : (_*ma.SR/1000)  :ba.slidingMinN(length,length))
+// ,(deltaGR(LookAheadTime,GR) : smoother(length) <: (_-_') : (_*ma.SR/1000)  <: ((_:ba.slidingMinN(length,length))<_@length))
+// ,(deltaGR(LookAheadTime,GR)  <: (del) : (_*ma.SR/1000) : (_@length) )
+ ,deltaGR(LookAheadTime,GR)@length
 // ,(deltaGR(LookAheadTime,GR)     : smoother(length))
 ;
 
@@ -45,21 +47,23 @@ expo = 10; // 10 = 1024 samples
 deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
 with {
   FBdeltaGR(maxI,GR,FB) =
-    par(i, 16,
+    par(i, nrBands,
         (
           (lowestGRlinI(i,GR)-FB)
             / ((linI(i)-ramp(linI(i),lowestGRlinI(i,GR)))+1)
         )
-        : attackRelease(i)
+// : attackRelease(i)
     )
-    : ((minN(16) :smoothie ) +FB)
-    // :min(0)
+    : attackReleaseBlock(nrBands)
+    : ((minN(nrBands) :smoothie ) +FB)
+// :min(0)
     :min(GR@LookAheadTime);
-  linI(i) = (i+1)*64;
+  linI(i) = (i+1)*32; // the lenght of each block
   lowestGRlinI(i,GR) = GR:ba.slidingMinN(linI(i),linI(i))@delCompLin(i);
 
   delCompLin(i) = pow(2,expo)-linI(i);
-
+  attackReleaseBlock(size) =
+    attackPlusInputs :  par(i, size, attackRelease(i));
   // smoothie(delta) = select2(delta>=0,delta,smoothieFB(delta)~_);
   // smoothieFB(delta,FB) = min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta);
   smoothie(delta) = smoothieFB(delta)~_;
@@ -70,11 +74,11 @@ with {
   // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
   // ramp(maxI,GR) = ((ba.countup(maxI,(GR-GR')!=0)/maxI):attackShaper)*maxI;
   ramp(maxI,GR) =   ba.countup(maxI,(GR-GR')!=0);
-  attackRelease(i,delta) =
+  attackRelease(i,attack,delta) =
     select2((delta)<=0,
             releaseFunc,
             // (1/(i+1))+attack : min(1)
-            attackFunc(i)
+            attackFunc(i,attack)
     )*delta;
   releaseFunc =  1+release;
   // releaseFunc(delta) = min((delta*smoo)+( (1+release)  *(1-smoo)));
@@ -89,14 +93,13 @@ with {
   // //+ ((i==(curve-2))*-0.75)
   //     )
   //   ;
-  attackFunc(i) =
-    (
-      (
-        1/
-          (  (i-curve)*64:max(1)*(attack:pow(4)) )
-      ) : min(1)+ ((i==curve)*1)
-    )
-  ;
+  // attackFunc(i,attack) =
+  //   (
+  //     1/
+  //       (  i*64:max(1)*((attack:min(1)*-1)+1:pow(4)) )
+  //   ) : min(1) + (attack-1:max(0):pow(1))
+  // ;
+  attackFunc(i,attack) = attack;
   // attackFunc(i) =
   //   (
   //     (
@@ -105,7 +108,7 @@ with {
   //     ) : min(1)+ ((i==curve)*1)
   //   )
   // ;
-  curve = hslider("curve", 3, -1, 16, 1);
+  curve = hslider("curve", 3, -1, nrBands, 1);
   // curve = hslider("curve", 3, 2, expo, 1);
   // (1/(i+1))-attack : min(1));
   attack =  hslider("attack",  0, 0, 1, 0.001);
@@ -114,6 +117,15 @@ with {
   // OK for 10 and 13
   release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo/2);
   // release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo)/32;
+  attackPlusInputs =
+    (
+      VocoderLinArrayParametricMid(bottom,mid,band,top),
+      si.bus(nrBands)
+    ): ro.interleave(nrBands,2) ;
+  bottom = hslider("bottom", 2, 0, 2, 0.01);
+  mid = hslider("mid", 1, 0, 2, 0.01);
+  top = hslider("top", 0, 0, 2, 0.01);
+  band = hslider("band", 8, 1, nrBands, 1);
 };
 
 // lin from 32 (i=4)
@@ -237,10 +249,12 @@ attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit th
 
 VocoderLinArrayParametricMid(bottom,mid,band,top) =
   par(i, nrBands, select2(band<=i+1,midToBottomVal(i),midToTopVal(i)))
-  with {
-    midToBottomVal(i) = (midToBottom(i)*bottom) + (((midToBottom(i)*-1)+1)*mid);
-    midToBottom(i) = (band-(i+1))/(band-1);
+with {
+  midToBottomVal(i) = (midToBottom(i)*bottom) + (((midToBottom(i)*-1)+1)*mid);
+  midToBottom(i) = (band-(i+1))/(band-1);
 
-    midToTopVal(i) = (midToTop(i)*top) + (((midToTop(i)*-1)+1)*mid);
-    midToTop(i) = (i+1-band)/(nrBands-band);
-  };
+  midToTopVal(i) = (midToTop(i)*top) + (((midToTop(i)*-1)+1)*mid);
+  midToTop(i) = (i+1-band)/(nrBands-band);
+};
+
+nrBands = 32;
