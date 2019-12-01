@@ -5,12 +5,77 @@ declare version "0.1";
 
 import("stdfaust.lib");
 maxmsp = library("maxmsp.lib");
+comp = library("../FaustCompressors/compressors.lib");
 
 // process(x) = (gainCalculator(x):ba.db2linear)*(x@LookAheadTime);
 process =
+// lookahead_compression_gain_mono(strength,threshold,0,0,knee,x);
+  lim(1);
+// comp.compressor_N_chan_demo(2);
 
+lim(N) =
+  (si.bus(N) <:
+   (lookahead_compression_gain_N_chan(strength,threshold,0,0,knee,hold,link,N),si.bus(N))
+  )
+  :(ro.interleave(N,2):par(i,N,comp.meter*(_@maxHold)));
+
+// generalise compression gains for N channels.
+// first we define a mono version:
+lookahead_compression_gain_N_chan(strength,thresh,att,rel,knee,hold,link,1) =
+  lookahead_compression_gain_mono(strength,thresh,att,rel,knee,hold);
+
+// The actual N-channel version:
+// Calculate the maximum gain reduction of N channels,
+// and then crossfade between that and each channel's own gain reduction,
+// to link/unlink channels
+lookahead_compression_gain_N_chan(strength,thresh,att,rel,knee,hold,link,N) =
+  par(i, N, lookahead_compression_gain_mono(strength,thresh,att,rel,knee,hold))
+  <:(si.bus(N),(minN(N)<:si.bus(N))):ro.interleave(N,2):par(i,N,(comp.crossfade(link)));
+
+lookahead_compression_gain_mono(strength,thresh,att,rel,knee,hold,level) =
+  (
+    level:abs:ba.linear2db
+    : lookahead_gain_computer(thresh,knee)
+// :deltaGR(LookAheadTime)
+  ) *strength
+  : ba.db2linear;
+
+lookahead_gain_computer(thresh,knee,level) =
+  lookahead_gain_computerFB(thresh,knee,level)~_
+with {
+  lookahead_gain_computerFB(thresh,knee,level,lastdown) =
+    (
+      // comp.gain_computer(1,thresh,knee,level)@maxHold
+      comp.gain_computer(1,thresh,knee,level)@(maxHold-LookAheadTime):deltaGR(LookAheadTime)
+    ,
+      (comp.gain_computer(1,thresh,knee,level):ba.slidingMinN(hold,maxHold):max(lastdown))
+      ) : min;
+};
+
+
+// maxHold = pow(2,3);
+maxHold = pow(2,13);
+
+
+strength = (hslider("[0] Strength [style:knob]
+      [tooltip: A compression Strength of 0 means no gain reduction and 1 means full gain reduction]",
+                    1, 0, 8, 0.01));
+threshold = (hslider("[1] Threshold [unit:dB] [style:knob]
+      [tooltip: When the signal level exceeds the Threshold (in dB), its level is compressed according to the Strength]",
+                     0, -60, 10, 0.1));
+knee = (hslider("[2] Knee [unit:dB] [style:knob]
+      [tooltip: soft knee amount in dB]",
+                6, 0, 30, 0.1));
+link = (hslider("[4] link [style:knob]
+      [tooltip: 0 means all channels get individual gain reduction, 1 means they all get the same gain reduction]",
+                1, 0, 1, 0.01));
+
+hold = hslider("[5] Hold time  [style:knob]", 0, 0, maxHold, 1);
+
+gainCompareGraphs =
+  // VocoderLinArrayParametricMid(11,22,16,33)
   GR@(LookAheadTime+length)
-  // ,GRlong@(LookAheadTime)
+// ,GRlong@(LookAheadTime)
  ,line(lowestGRi(5,GR),pow(2,6))@length // fast fade
  ,line(lowestGR(GR),LookAheadTime)@length // slow fade
 // ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
@@ -20,131 +85,152 @@ process =
 // ,(deltaGR(LookAheadTime,GR)  <: (del) : (_*ma.SR/1000) : (_@length) )
  ,deltaGR(LookAheadTime,GR)@length
 // ,(deltaGR(LookAheadTime,GR)     : smoother(length))
-;
+               ;
 
-del(x) = x-x';
-// del = delFB~_;
-// delFB(FB,x) = x-FB;
-// expo = 4;
-// expo = 8;
-expo = 10; // 10 = 1024 samples
-// expo = 13; // 13 = 8192 samples, = 0.185759637188 sec = 186ms
+               del(x) = x-x';
+               // del = delFB~_;
+               // delFB(FB,x) = x-FB;
 
-// deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
-// with {
-//   FBdeltaGR(maxI,GR,FB) =
-//     par(i, expo,
-//         (
-//           (lowestGRi(i,GR)-FB)
-//             / ((powI(i)-ramp(powI(i),lowestGRi(i,GR)))+1)
-//         )
-//         : attackRelease(i)
-//     )
-//     : ((minN(expo) :smoothie ) +FB)
-//     // :min(0)
-//     :min(GR@LookAheadTime)
-//   ;
-deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
-with {
-  FBdeltaGR(maxI,GR,FB) =
-    par(i, nrBands,
-        (
-          (lowestGRlinI(i,GR)-FB)
-            / ((linI(i)-ramp(linI(i),lowestGRlinI(i,GR)))+1)
-        )
+               // deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
+               // with {
+               //   FBdeltaGR(maxI,GR,FB) =
+               //     par(i, expo,
+    //         (
+    //           (lowestGRi(i,GR)-FB)
+    //             / ((powI(i)-ramp(powI(i),lowestGRi(i,GR)))+1)
+    //         )
+    //         : attackRelease(i)
+    //     )
+    //     : ((minN(expo) :smoothie ) +FB)
+    //     // :min(0)
+    //     :min(GR@LookAheadTime)
+    //   ;
+    deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
+    with {
+      FBdeltaGR(maxI,GR,FB) =
+        par(i, nrBands,
+            (
+              (lowestGRlinI(i,GR)-FB)
+                / ((linI(i)-ramp(linI(i),lowestGRlinI(i,GR)))+1)
+            )
 // : attackRelease(i)
-    )
-    : attackReleaseBlock(nrBands)
-    : ((minN(nrBands) :smoothie ) +FB)
+        )
+        : attackReleaseBlock(nrBands)
+        : ((minN(nrBands) :smoothie ) +FB)
 // :min(0)
-    :min(GR@LookAheadTime);
-  linI(i) = (i+1)*32; // the lenght of each block
-  lowestGRlinI(i,GR) = GR:ba.slidingMinN(linI(i),linI(i))@delCompLin(i);
+        :min(GR@LookAheadTime);
+      linI(i) = (i+1)*blockLength; // the lenght of each block
+      lowestGRlinI(i,GR) = GR:ba.slidingMinN(linI(i),linI(i))@delCompLin(i);
 
-  delCompLin(i) = pow(2,expo)-linI(i);
-  attackReleaseBlock(size) =
-    attackPlusInputs :  par(i, size, attackRelease(i));
-  // smoothie(delta) = select2(delta>=0,delta,smoothieFB(delta)~_);
-  // smoothieFB(delta,FB) = min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta);
-  smoothie(delta) = smoothieFB(delta)~_;
-  smoothieFB(delta,FB) = select2(delta>=0,delta,min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta));
-  smoo = hslider("smoo", 0, 0,0.999, 0.001):pow(1/128);
-  // countup(n,trig) : _
-  // * `n`: the maximum count value
-  // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
-  // ramp(maxI,GR) = ((ba.countup(maxI,(GR-GR')!=0)/maxI):attackShaper)*maxI;
-  ramp(maxI,GR) =   ba.countup(maxI,(GR-GR')!=0);
-  attackRelease(i,attack,delta) =
-    select2((delta)<=0,
-            releaseFunc,
-            // (1/(i+1))+attack : min(1)
-            attackFunc(i,attack)
-    )*delta;
-  releaseFunc =  1+release;
-  // releaseFunc(delta) = min((delta*smoo)+( (1+release)  *(1-smoo)));
-  //   attackFunc(i) =
-  //     (
-  //       (
-  //         1/
-  //           ( pow(( (i-curve):max(1)) , 2.5) ) // linear from i=4
-  //           // ) + pow(attack,2) : min(1)
-  //           // ) + pow(attack,2) : min(1)+ ((i==3)*1) + ((i==1)*-0.75)
-  //       ) + pow(attack,2) : min(1)+ ((i==curve)*1)
-  // //+ ((i==(curve-2))*-0.75)
-  //     )
-  //   ;
-  // attackFunc(i,attack) =
-  //   (
-  //     1/
-  //       (  i*64:max(1)*((attack:min(1)*-1)+1:pow(4)) )
-  //   ) : min(1) + (attack-1:max(0):pow(1))
-  // ;
-  attackFunc(i,attack) = attack;
-  // attackFunc(i) =
-  //   (
-  //     (
-  //       1/
-  //         (  (i-curve)*64:max(1)*(attack:pow(4)) )
-  //     ) : min(1)+ ((i==curve)*1)
-  //   )
-  // ;
-  curve = hslider("curve", 3, -1, nrBands, 1);
-  // curve = hslider("curve", 3, 2, expo, 1);
-  // (1/(i+1))-attack : min(1));
-  attack =  hslider("attack",  0, 0, 1, 0.001);
-  // OK for expo=10
-  // release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*32;
-  // OK for 10 and 13
-  release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo/2);
-  // release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo)/32;
-  attackPlusInputs =
-    (
-      VocoderLinArrayParametricMid(bottom,mid,band,top),
-      si.bus(nrBands)
-    ): ro.interleave(nrBands,2) ;
-  bottom = hslider("bottom", 2, 0, 2, 0.01);
-  mid = hslider("mid", 1, 0, 2, 0.01);
-  top = hslider("top", 0, 0, 2, 0.01);
-  band = hslider("band", 8, 1, nrBands, 1);
-};
+      delCompLin(i) = pow(2,expo)-linI(i);
+      attackReleaseBlock(size) =
+        attackPlusInputs :  par(i, size, attackRelease(i));
+      // smoothie(delta) = select2(delta>=0,delta,smoothieFB(delta)~_);
+      // smoothieFB(delta,FB) = min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta);
+      smoothie(delta) = smoothieFB(delta)~_;
+      smoothieFB(delta,FB) = select2(delta>=0,delta,min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta));
+      smoo = hslider("smoo", 0, 0,0.999, 0.001):pow(1/128);
+      // countup(n,trig) : _
+      // * `n`: the maximum count value
+      // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
+      // ramp(maxI,GR) = ((ba.countup(maxI,(GR-GR')!=0)/maxI):attackShaper)*maxI;
+      ramp(maxI,GR) =   ba.countup(maxI,(GR-GR')!=0);
+      attackRelease(i,attack,delta) =
+        select2((delta)<=0,
+                releaseFunc,
+                // (1/(i+1))+attack : min(1)
+                attackFunc(i,attack)
+        )*delta;
+      releaseFunc =  1+release;
+      // releaseFunc(delta) = min((delta*smoo)+( (1+release)  *(1-smoo)));
+      //   attackFunc(i) =
+      //     (
+      //       (
+      //         1/
+      //           ( pow(( (i-curve):max(1)) , 2.5) ) // linear from i=4
+      //           // ) + pow(attack,2) : min(1)
+      //           // ) + pow(attack,2) : min(1)+ ((i==3)*1) + ((i==1)*-0.75)
+      //       ) + pow(attack,2) : min(1)+ ((i==curve)*1)
+      // //+ ((i==(curve-2))*-0.75)
+      //     )
+      //   ;
+      // attackFunc(i,attack) =
+      //   (
+      //     1/
+      //       (  i*64:max(1)*((attack:min(1)*-1)+1:pow(4)) )
+      //   ) : min(1) + (attack-1:max(0):pow(1))
+      // ;
+      attackFunc(i,attack) = attack;
+      // attackFunc(i) =
+      //   (
+      //     (
+      //       1/
+      //         (  (i-curve)*64:max(1)*(attack:pow(4)) )
+      //     ) : min(1)+ ((i==curve)*1)
+      //   )
+      // ;
+      curve = hslider("curve", 3, -1, nrBands, 1);
+      // curve = hslider("curve", 3, 2, expo, 1);
+      // (1/(i+1))-attack : min(1));
+      attack =  hslider("attack",  0, 0, 1, 0.001);
+      // OK for expo=10
+      // release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*32;
+      // OK for 10 and 13
+      release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo/2);
+      // release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo)/32;
+      attackPlusInputs =
+        (
+          VocoderLinArrayParametricMid(bottom,mid,band,top),
+          si.bus(nrBands)
+        ): ro.interleave(nrBands,2) ;
+      bottom = hslider("bottom", 2, 0, 3, 0.01);
+      mid = hslider("mid", 1, 0, 3, 0.01);
+      top = hslider("top", 0, 0, 3, 0.01);
+      band = hslider("band", 8, 1, nrBands, 1);
+    };
 
-// lin from 32 (i=4)
-// *2 from 16-8
-// *1 from 8-4
-// *0.25 from 4-0
 
-// auto-attack-release:
-// vocoder, each band represents a fixed A&R, (lower is longer of course)
-// and each influences the end result
-// use VOF code to normalise and focus
+    /*
 
-// if (somewhere in the next "length" samples, we are going down quicker then we are now):
-// then (fade down to that speed)
-// second implementation option:
-// if knikpunt
-// then (fade down to 0 speed at knikpunt, then "normal release")
-// TODO: remove this length mess & delay! :)
-// length = 2;
+slow =
+band 16
+bottom 1.92
+mid 1.80
+release 0.71
+smoo = 0.829
+top 0
+
+fast =
+band 3
+bottom 1.92
+mid 0.08
+release 0
+smoo = 0.046
+top 0
+
+
+
+*/
+
+    lss = 3;
+
+    // lin from 32 (i=4)
+    // *2 from 16-8
+    // *1 from 8-4
+    // *0.25 from 4-0
+
+    // auto-attack-release:
+    // vocoder, each band represents a fixed A&R, (lower is longer of course)
+    // and each influences the end result
+    // use VOF code to normalise and focus
+
+    // if (somewhere in the next "length" samples, we are going down quicker then we are now):
+    // then (fade down to that speed)
+    // second implementation option:
+    // if knikpunt
+    // then (fade down to 0 speed at knikpunt, then "normal release")
+    // TODO: remove this length mess & delay! :)
+    // length = 2;
 // length = pow(2,6); // 64
 // length = pow(2,7); // 128
 length = pow(2,9); // 128
@@ -258,3 +344,10 @@ with {
 };
 
 nrBands = 32;
+// nrBands = 4;
+blockLength = pow(2,expo)/nrBands;
+
+// expo = 4;
+// expo = 8;
+expo = 10; // 10 = 1024 samples
+// expo = 13; // 13 = 8192 samples, = 0.185759637188 sec = 186ms
