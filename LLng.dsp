@@ -26,6 +26,7 @@ lim(N) =
    )
   )
   :(ro.interleave(N,2):par(i,N,(meter:ba.db2linear)*(_@maxHold)))
+// :ro.interleave(N,2):par(i,N,(((meter:ba.db2linear<:si.bus(2))),(_@maxHold)):(_,*)):ro.interleave(2,N):ro.cross(N*2):par(i, 2, ro.cross(N))
 with {
   meter = _<:(_, (max(maxGR):(hbargraph("[1][unit:dB][tooltip: gain reduction in dB]", maxGR, 0)))):attach;
 };
