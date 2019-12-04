@@ -9,10 +9,10 @@ comp = library("../FaustCompressors/compressors.lib");
 
 // process(x) = (gainCalculator(x):ba.db2linear)*(x@LookAheadTime);
 process =
-  // GR;
+// GR;
   // lookahead_compression_gain_mono(strength,threshold,0,0,knee,x);
-  lim(2);
-// gainCompareGraphs ;
+  // lim(1);
+  gainCompareGraphs ;
 
 // comp.compressor_N_chan_demo(2);
 
@@ -59,18 +59,15 @@ lookahead_compression_gain_N_chan(strength,thresh,att,rel,knee,hold,link,N) =
 
 lookahead_compression_gain_mono(strength,thresh,att,rel,knee,hold,lastdown,level) =
   (
-    level
-    : lookahead_gain_computer(thresh,knee,lastdown)
+    comp.gain_computer(1,thresh,knee,level):deltaGR(LookAheadTime,lastdown)
 // :deltaGR(LookAheadTime)
   ) *strength;
 
-lookahead_gain_computer(thresh,knee,lastdown,level) =
-  (
-    // comp.gain_computer(1,thresh,knee,level)@maxHold
-    comp.gain_computer(1,thresh,knee,level)@(maxHold-LookAheadTime):deltaGR(LookAheadTime,lastdown)
-  ,
-    (comp.gain_computer(1,thresh,knee,level):ba.slidingMinN(hold,maxHold):max(lastdown))
-  ) : min;
+// (
+// comp.gain_computer(1,thresh,knee,level)@(maxHold-LookAheadTime):deltaGR(LookAheadTime,lastdown)
+// ,
+// (comp.gain_computer(1,thresh,knee,level):ba.slidingMinN(hold,maxHold):max(lastdown))
+// ) : min;
 
 
 
@@ -93,18 +90,11 @@ hold = hslider("[5] Hold time  [style:knob]", 0, 0, maxHold, 1);
 gainCompareGraphs =
   // VocoderLinArrayParametricMid(11,22,16,33)
   GR@maxHold
-// ,GRlong@(LookAheadTime)
- ,line(lowestGRi(5,GR),pow(2,6))@(maxHold-LookAheadTime)// fast fade
-// ,line(lowestGR(GR),LookAheadTime)@length // slow fade
-// ,(par(i, expo, line(GR:ba.slidingMinN(pow(2,i+1),pow(2,i+1)) , pow(2,i+1) )@(pow(2,expo)-pow(2,i+1))):minN(expo))
-// ,((((os.lf_trianglepos(4)*LookAheadTime) +1)/LookAheadTime):min(1):attackShaper)
-// ,(deltaGR(LookAheadTime,GR)  <: (_-_') : (_*ma.SR/1000)  :ba.slidingMinN(length,length))
-// ,(deltaGR(LookAheadTime,GR) : smoother(length) <: (_-_') : (_*ma.SR/1000)  <: ((_:ba.slidingMinN(length,length))<_@length))
-// ,(deltaGR(LookAheadTime,GR)  <: (del) : (_*ma.SR/1000) : (_@length) )
-// ,(GR:deltaGR(LookAheadTime)@length)
- ,(GR:(deltaGR(LookAheadTime)~_)@(maxHold-LookAheadTime))
- ,(GR:ba.slidingMinN(hold,maxHold))
-// ,(deltaGR(LookAheadTime,GR)     : smoother(length))
+// ,
+// (line(lowestGRi(5,GR),pow(2,6))@(maxHold-LookAheadTime))// fast fade
+,
+  (GR:(deltaGR(LookAheadTime)~_))
+,(GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold))
 ;
 
 del(x) = x-x';
@@ -126,23 +116,33 @@ del(x) = x-x';
 //     :min(GR@LookAheadTime)
 //   ;
 // deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
-deltaGR(maxI,FB,GR) = FBdeltaGR(maxI,FB,GR)
-with {
-  FBdeltaGR(maxI,FB,GR) =
-    par(i, nrBands,
-        (
-          (lowestGRlinI(i,GR)-FB)
-              / ((linI(i)-ramp(linI(i),lowestGRlinI(i,GR)))+1)
-        )
+deltaGR(maxI,FB,GR) =
+  par(i, nrBands,
+      (
+        (lowestGRlinI(i,GR)@(maxHold-LookAheadTime)-FB)
+
+          / ((linI(i)-ramp(linI(i),lowestGRlinI(i,GR))@(maxHold-LookAheadTime))+1)
+      )
 // : attackRelease(i)
-    )
-    : attackReleaseBlock(nrBands)
-    : ((minN(nrBands) :smoothie ) +FB)
+  )
+  : attackReleaseBlock(nrBands)
+  : ((minN(nrBands): holdFunction :smoothie ) +FB)
 // :min(0)
-    :min(GR@LookAheadTime);
+  :min(GR@maxHold)
+with {
   linI(i) = (i+1)*pow(2,expo)/nrBands; // the lenght of each block
   lowestGRlinI(i,GR) = GR:ba.slidingMinN(linI(i),linI(i))@delCompLin(i);
 
+  holdFunction(attackedGR) =
+    attackedGR*(
+      (GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold) > FB)
+        +
+        (attackedGR<0)
+      :min(1)
+    );
+  // attackedGR;
+  // holdFunction = _;//@(maxHold-LookAheadTime);//*(GR:ba.slidingMinN(hold,maxHold) >= FB);
+  // (comp.gain_computer(1,thresh,knee,level):ba.slidingMinN(hold,maxHold):max(lastdown))
   delCompLin(i) = pow(2,expo)-linI(i);
   attackReleaseBlock(size) =
     attackPlusInputs :  par(i, size, attackRelease(i));
@@ -338,7 +338,7 @@ minN(n) = opWithNInputs(min,n);
 opWithNInputs =
   case {
     (op,0) => 0:!;
-        (op,1) => _;
+      (op,1) => _;
     (op,2) => op;
     // (op,N) => (opWithNInputs(op,N/2),opWithNInputs(op,N/2)) : op;
     (op,N) => (opWithNInputs(op,N-1),_) : op;
@@ -364,17 +364,14 @@ with {
   midToTop(i) = (i+1-band)/(nrBands-band);
 };
 
-nrBands = 32;
-// nrBands = 4;
-// blockLength = pow(2,expo)/nrBands;
+// nrBands = 32;
+nrBands = 4;
 
 // expo = 4;
-// expo = 8;
-// expo = 6;
 expo = 10; // 10 = 1024 samples
-// expo = 13; // 13 = 8192 samples, = 0.185759637188 sec = 186ms
 
-// maxHold = pow(2,7);
+// maxHold = pow(2,6);
 maxHold = pow(2,13);
+// expo = 13; // 13 = 8192 samples, = 0.185759637188 sec = 186ms
 
 maxGR = -30;
