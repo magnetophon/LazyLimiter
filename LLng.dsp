@@ -11,8 +11,8 @@ comp = library("../FaustCompressors/compressors.lib");
 process =
 // GR;
   // lookahead_compression_gain_mono(strength,threshold,0,0,knee,x);
-  // lim(1);
-  gainCompareGraphs ;
+  lim(1);
+// gainCompareGraphs ;
 
 // comp.compressor_N_chan_demo(2);
 
@@ -126,7 +126,7 @@ deltaGR(maxI,FB,GR) =
 // : attackRelease(i)
   )
   : attackReleaseBlock(nrBands)
-  : ((minN(nrBands): holdFunction :smoothie ) +FB)
+  : ((minN(nrBands): holdFunction :smoothRel(smooR): smoothAttack(smooA) ) +FB)
 // :min(0)
   :min(GR@maxHold)
 with {
@@ -148,9 +148,11 @@ with {
     attackPlusInputs :  par(i, size, attackRelease(i));
   // smoothie(delta) = select2(delta>=0,delta,smoothieFB(delta)~_);
   // smoothieFB(delta,FB) = min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta);
-  smoothie(delta) = smoothieFB(delta)~_;
-  smoothieFB(delta,FB) = select2(delta>=0,delta,min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta));
-  smoo = hslider("smoo", 0, 0,0.999, 0.001):pow(1/128);
+  smoothAttack(smoo,delta) = select2((delta<=_)*(delta<0)  ,delta,((_*smoo) + (delta*(1-smoo))) )~(_<:(_,_));
+  smoothRel(smoo,delta) = smoothieFB(smoo,delta)~_;
+  smoothieFB(smoo,delta,FB) = select2(delta>=0,delta,min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta));
+  smooA = hslider("smooA", 0, 0,0.999, 0.001):pow(1/128);
+  smooR = hslider("smooR", 0, 0,0.999, 0.001):pow(1/128);
   // countup(n,trig) : _
   // * `n`: the maximum count value
   // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
@@ -204,7 +206,7 @@ with {
       VocoderLinArrayParametricMid(bottom,mid,band,top),
       si.bus(nrBands)
     ): ro.interleave(nrBands,2) ;
-  bottom = hslider("bottom", 2, 0, 3, 0.01);
+  bottom = hslider("bottom", 2, 0, 30, 0.01);
   mid = hslider("mid", 1, 0, 3, 0.01);
   top = hslider("top", 0, 0, 3, 0.01);
   band = hslider("band", 8, 1, nrBands, 1);
