@@ -11,8 +11,8 @@ comp = library("../FaustCompressors/compressors.lib");
 process =
 // GR;
   // lookahead_compression_gain_mono(strength,threshold,0,0,knee,x);
-  lim(1);
-// gainCompareGraphs ;
+  // lim(1);
+  gainCompareGraphs ;
 
 // comp.compressor_N_chan_demo(2);
 
@@ -88,14 +88,19 @@ link = (hslider("[4] link [style:knob]
 hold = hslider("[5] Hold time  [style:knob]", 0, 0, maxHold, 1);
 
 gainCompareGraphs =
-  // VocoderLinArrayParametricMid(11,22,16,33)
   GR@maxHold
 // ,
 // (line(lowestGRi(5,GR),pow(2,6))@(maxHold-LookAheadTime))// fast fade
-,
-  (GR:(deltaGR(LookAheadTime)~_))
-,(GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold))
+// lowestGRi(5,GR)
+, (GR:(deltaGR(LookAheadTime)~_))
+// ,(GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold))
+, ((attackRamp(expo-tmp)/powI(expo-tmp))@(maxHold-LookAheadTime))
+, ((attackRamp(expo-1)/powI(expo-1))@(maxHold-LookAheadTime))
+  // , ((ramp(powI(1),lowestGRi(1,GR))/powI(1))@(maxHold-LookAheadTime))
+  // ba.countup(powI(5),(GR-GR')!=0)
+  // ba.countup(powI(5),(GR-GR')!=0)
 ;
+tmp=4;
 
 del(x) = x-x';
 // del = delFB~_;
@@ -117,18 +122,29 @@ del(x) = x-x';
 //   ;
 // deltaGR(maxI,GR) = FBdeltaGR(maxI,GR)~_
 deltaGR(maxI,FB,GR) =
-  par(i, nrBands,
-      (
-        (lowestGRlinI(i,GR)@(maxHold-LookAheadTime)-FB)
+  (
+    par(i, expo,
+        (
+          (lowestGRi(i,GR)@(maxHold-LookAheadTime)-FB)
+          // / ((powI(i)-ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime))+1)
+          / ((powI(i)-select2(lowestGRi(i,GR)@(maxHold-LookAheadTime)>=FB , attackRamp(i)@(maxHold-LookAheadTime),ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime)))+1)
 
-          / ((linI(i)-ramp(linI(i),lowestGRlinI(i,GR))@(maxHold-LookAheadTime))+1)
-      )
-// : attackRelease(i)
+        )
+       )
+    : attackReleaseBlock(expo)
+    : ((minN(expo): holdFunction :smoothRel(smooR): smoothAttack(smooA) ) +FB)
+    :min(GR@maxHold)
   )
-  : attackReleaseBlock(nrBands)
-  : ((minN(nrBands): holdFunction :smoothRel(smooR): smoothAttack(smooA) ) +FB)
-// :min(0)
-  :min(GR@maxHold)
+  // par(i, nrBands,
+  // (
+  // (lowestGRlinI(i,GR)@(maxHold-LookAheadTime)-FB)
+
+  // / ((linI(i)-ramp(linI(i),lowestGRlinI(i,GR))@(maxHold-LookAheadTime))+1)
+  // )
+  // )
+  // : attackReleaseBlock(nrBands)
+  // : ((minN(nrBands): holdFunction :smoothRel(smooR): smoothAttack(smooA) ) +FB)
+  // :min(GR@maxHold)
 with {
   linI(i) = (i+1)*pow(2,expo)/nrBands; // the lenght of each block
   lowestGRlinI(i,GR) = GR:ba.slidingMinN(linI(i),linI(i))@delCompLin(i);
@@ -136,8 +152,8 @@ with {
   holdFunction(attackedGR) =
     attackedGR*(
       (GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold) > FB)
-        +
-        (attackedGR<0)
+      +
+      (attackedGR<0)
       :min(1)
     );
   // attackedGR;
@@ -145,7 +161,7 @@ with {
   // (comp.gain_computer(1,thresh,knee,level):ba.slidingMinN(hold,maxHold):max(lastdown))
   delCompLin(i) = pow(2,expo)-linI(i);
   attackReleaseBlock(size) =
-    attackPlusInputs :  par(i, size, attackRelease(i));
+    attackPlusInputs(size) :  par(i, size, attackRelease(i));
   // smoothie(delta) = select2(delta>=0,delta,smoothieFB(delta)~_);
   // smoothieFB(delta,FB) = min(( (FB*smoo) + (delta*(1-smoo))):max(0) , delta);
   smoothAttack(smoo,delta) = select2((delta<=_)*(delta<0)  ,delta,((_*smoo) + (delta*(1-smoo))) )~(_<:(_,_));
@@ -157,13 +173,13 @@ with {
   // * `n`: the maximum count value
   // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
   // ramp(maxI,GR) = ((ba.countup(maxI,(GR-GR')!=0)/maxI):attackShaper)*maxI;
-  ramp(maxI,GR) =   ba.countup(maxI,(GR-GR')!=0);
+  // ramp(maxI,GR) =   ba.countup(maxI,(GR-GR')!=0);
   attackRelease(i,attack,delta) =
     select2((delta)<=0,
             releaseFunc,
             // (1/(i+1))+attack : min(1)
             attackFunc(i,attack)
-    )*delta;
+           )*delta;
   releaseFunc =  1+release;
   // releaseFunc(delta) = min((delta*smoo)+( (1+release)  *(1-smoo)));
   //   attackFunc(i) =
@@ -201,18 +217,24 @@ with {
   // OK for 10 and 13
   release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo/2);
   // release = (((hslider("release", 0, 0, 1, 0.001):pow(0.2))*-1)+1)*pow(2,expo)/32;
-  attackPlusInputs =
+  attackPlusInputs(size) =
     (
-      VocoderLinArrayParametricMid(bottom,mid,band,top),
-      si.bus(nrBands)
-    ): ro.interleave(nrBands,2) ;
+      VocoderLinArrayParametricMid(bottom,mid,band(size),top,size),
+      si.bus(size)
+    ): ro.interleave(size,2) ;
   bottom = hslider("bottom", 2, 0, 30, 0.01);
   mid = hslider("mid", 1, 0, 3, 0.01);
   top = hslider("top", 0, 0, 3, 0.01);
-  band = hslider("band", 8, 1, nrBands, 1);
+  band(size) = hslider("band", 8, 1, size, 1);
 };
 
 
+mult = hslider("mult", 1, 0, 3, 0.01);
+ramp(maxI,GR) =   ba.countup(maxI,(GR>GR'))*mult;
+attackRamp(i) =   ba.countup(powI(i),(deltaI(i,GR)<deltaI(i,GR)'));
+deltaI(i,GR) = (lowestGRi(i,GR));
+// attackRamp(i) =   ba.countup(powI(i),(lowestGRi(i,GR)-lowestGRi(i,GR)')!=0);
+// todo: ramp if lowestgr(10) !=lowestgr(5)
 /*
 
 slow =
@@ -313,67 +335,67 @@ with {
   state (t, c) = nt, ba.if (nt <= 0, value, c+(value - c) / nt)
   with {
   nt = ba.if( value != value', time, t-1);
-  };
+};
 };
 
 lowestGR(GR) = GR:ba.slidingMinN(LookAheadTime,LookAheadTime);
 
 
 GR = no.lfnoise0(LookAheadTime *t * (no.lfnoise0(LookAheadTime/2):max(0.1) )):pow(3)*(1-noiseLVL) +(no.lfnoise(rate):pow(3) *noiseLVL):min(0);//(no.noise:min(0)):ba.sAndH(t)
-t= hslider("time", 0.1, 0, 1, 0.001);
-noiseLVL = hslider("noise", 0, 0, 1, 0.01);
-rate = hslider("rate", 20, 10, 20000, 10);
+                                                                                                                                       t= hslider("time", 0.1, 0, 1, 0.001);
+                                                                                                                                       noiseLVL = hslider("noise", 0, 0, 1, 0.01);
+                                                                                                                                       rate = hslider("rate", 20, 10, 20000, 10);
 
 
 
-minGRdelta(GR) =
-  minGRdeltaFB(GR)~_
-with {
-  GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(LookAheadTime-i+1);
-  // GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(((((LookAheadTime-i+1)/LookAheadTime):min(1):attackShaper)*LookAheadTime));
-  minGRdeltaFB(GR,FB) = par(i, LookAheadTime+1, GRdeltaFB(GR,i,FB)):minN(LookAheadTime+1)+FB;
-};
+                                                                                                                                       minGRdelta(GR) =
+                                                                                                                                         minGRdeltaFB(GR)~_
+                                                                                                                                       with {
+                                                                                                                                         GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(LookAheadTime-i+1);
+                                                                                                                                         // GRdeltaFB(GR,i,FB) = (GR@(i) - FB)/(((((LookAheadTime-i+1)/LookAheadTime):min(1):attackShaper)*LookAheadTime));
+                                                                                                                                         minGRdeltaFB(GR,FB) = par(i, LookAheadTime+1, GRdeltaFB(GR,i,FB)):minN(LookAheadTime+1)+FB;
+                                                                                                                                       };
 
-minN(n) = opWithNInputs(min,n);
+                                                                                                                                       minN(n) = opWithNInputs(min,n);
 
-// opWithNInputs(op,n) = seq(j,(log(n)/log(2)),par(k,n/(2:pow(j+1)),op));
-opWithNInputs =
-  case {
-    (op,0) => 0:!;
-      (op,1) => _;
-    (op,2) => op;
-    // (op,N) => (opWithNInputs(op,N/2),opWithNInputs(op,N/2)) : op;
-    (op,N) => (opWithNInputs(op,N-1),_) : op;
-    // (op,N) => (opWithNInputs(op,nUp(N)),opWithNInputs(op,nDown(N))) : op with {
-    // nDown(N) = int(floor( N/2));
-    // nUp(N)   = int(floor((N/2)+0.5));
-    // };
-  };
+                                                                                                                                       // opWithNInputs(op,n) = seq(j,(log(n)/log(2)),par(k,n/(2:pow(j+1)),op));
+                                                                                                                                       opWithNInputs =
+                                                                                                                                         case {
+                                                                                                                                           (op,0) => 0:!;
+                                                                                                                                           (op,1) => _;
+                                                                                                                                           (op,2) => op;
+                                                                                                                                           // (op,N) => (opWithNInputs(op,N/2),opWithNInputs(op,N/2)) : op;
+                                                                                                                                           (op,N) => (opWithNInputs(op,N-1),_) : op;
+                                                                                                                                           // (op,N) => (opWithNInputs(op,nUp(N)),opWithNInputs(op,nDown(N))) : op with {
+                                                                                                                                           // nDown(N) = int(floor( N/2));
+                                                                                                                                           // nUp(N)   = int(floor((N/2)+0.5));
+                                                                                                                                           // };
+                                                                                                                                         };
 
-gainCalculator(x) = x;
-attack                  = (hslider("[2]attack shape[tooltip: 0 gives a linear attack (slow), 1 a strongly exponential one (fast)]", 1 , 0, 1 , 0.001));
-attackShaper(fraction)= ma.tanh(fraction:pow(attack:attackScale)*(attack*5+.1))/ma.tanh(attack*5+.1);
-attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better
+                                                                                                                                       gainCalculator(x) = x;
+                                                                                                                                       attack                  = (hslider("[2]attack shape[tooltip: 0 gives a linear attack (slow), 1 a strongly exponential one (fast)]", 1 , 0, 1 , 0.001));
+                                                                                                                                       attackShaper(fraction)= ma.tanh(fraction:pow(attack:attackScale)*(attack*5+.1))/ma.tanh(attack*5+.1);
+                                                                                                                                       attackScale(x) = (x+1):pow(7); //from 0-1 to 1-128, just to make the knob fit the aural experience better
 
 
-VocoderLinArrayParametricMid(bottom,mid,band,top) =
-  par(i, nrBands, select2(band<=i+1,midToBottomVal(i),midToTopVal(i)))
-with {
-  midToBottomVal(i) = (midToBottom(i)*bottom) + (((midToBottom(i)*-1)+1)*mid);
-  midToBottom(i) = (band-(i+1))/(band-1);
+                                                                                                                                       VocoderLinArrayParametricMid(bottom,mid,band,top,size) =
+                                                                                                                                         par(i, size, select2(band<=i+1,midToBottomVal(i),midToTopVal(i)))
+                                                                                                                                       with {
+                                                                                                                                         midToBottomVal(i) = (midToBottom(i)*bottom) + (((midToBottom(i)*-1)+1)*mid);
+                                                                                                                                         midToBottom(i) = (band-(i+1))/(band-1);
 
-  midToTopVal(i) = (midToTop(i)*top) + (((midToTop(i)*-1)+1)*mid);
-  midToTop(i) = (i+1-band)/(nrBands-band);
-};
+                                                                                                                                         midToTopVal(i) = (midToTop(i)*top) + (((midToTop(i)*-1)+1)*mid);
+                                                                                                                                         midToTop(i) = (i+1-band)/(size-band);
+                                                                                                                                       };
 
-// nrBands = 32;
-nrBands = 4;
+                                                                                                                                       // nrBands = 32;
+                                                                                                                                       nrBands = 4;
 
-// expo = 4;
-expo = 10; // 10 = 1024 samples
+                                                                                                                                       // expo = 4;
+                                                                                                                                       expo = 10; // 10 = 1024 samples
 
-// maxHold = pow(2,6);
-maxHold = pow(2,13);
-// expo = 13; // 13 = 8192 samples, = 0.185759637188 sec = 186ms
+                                                                                                                                       // maxHold = pow(2,6);
+                                                                                                                                       maxHold = pow(2,13);
+                                                                                                                                       // expo = 13; // 13 = 8192 samples, = 0.185759637188 sec = 186ms
 
-maxGR = -30;
+                                                                                                                                       maxGR = -30;
