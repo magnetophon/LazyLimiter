@@ -90,11 +90,11 @@ link = (hslider("[4] link [style:knob]
 hold = hslider("[5] Hold time  [style:knob]", 0, 0, maxHold, 1);
 
 gainCompareGraphs =
-  // GR@maxHold
-  // ,
+  GR@maxHold
+,
   // (line(lowestGRi(5,GR),pow(2,6))@(maxHold-LookAheadTime))// fast fade
   // lowestGRi(5,GR)
-  (GR:(deltaGR(LookAheadTime)~(_,!)))
+  (GR:(deltaGR(LookAheadTime)~_))
 // ,(GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold))
 // , ((attackRamp(expo-tmp)/powI(expo-tmp)))
 // , ((attackRamp(expo-1)/powI(expo-1)))
@@ -133,7 +133,7 @@ deltaGR(maxI,FB,GR) =
             (
               ((lowestGRi(i,GR)@(maxHold-LookAheadTime):SandH(trig(i,GR,FB))-FB))
                   // / ((powI(i)-ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime))+1)
-                  / ((powI(i)- attackRamp(i,FB))+1)
+                / ((powI(i)-1- attackRamp(i,FB)):max(0)+1)
             ),
             (
               ((lowestGRi(i,GR)@(maxHold-LookAheadTime)-FB))
@@ -146,10 +146,10 @@ deltaGR(maxI,FB,GR) =
     : ((minN(expo): holdFunction :smoothRel(smooR): smoothAttack(smooA) ) +FB)
     :min(GR@maxHold)
   )
-,((FB-FB') *1024)
-,(deltaI(i,GR,FB) *1024)
+,((FB-FB') *pow(2,expo))
+,(deltaI(expo-1,GR,FB) *pow(2,expo))
 // ,(attackRamp(expo-1,FB) / powI(expo-1))
-,(trig(i,GR,FB)*0.5)
+// ,(trig(i,GR,FB)*0.5)
 // ,(trig4(i,GR,FB) * 0.25)
 // ,(trig2(i,GR,FB)*0.25)
 // par(i, nrBands,
@@ -247,9 +247,9 @@ with {
 };
 
 // trig(i,GR,FB) = deltaI(i,GR,FB)<(FB-FB'):ba.impulsify ;//* (FB==GR@maxHold);
-trig(i,GR,FB) = select3(sel,trig1(i,GR,FB) , trig2(i,GR,FB), trig3(i,GR,FB) );
-sel = hslider("sel", 0, 0, 2, 1);
-trig1(i,GR,FB) = deltaI(i,GR,FB) <(FB-FB') ;
+// trig(i,GR,FB) = select3(0,trig1(i,GR,FB) , trig2(i,GR,FB), trig3(i,GR,FB) );
+// sel = hslider("sel", 0, 0, 2, 1);
+trig(i,GR,FB) = deltaI(i,GR,FB) <(FB-FB') ;
 trig2(i,GR,FB) = deltaI(i,GR,FB) <(FB-FB') * (FB> (lowestGRi(i,GR)@(maxHold-LookAheadTime))) ;
 trig3(i,GR,FB) = ((GR/powI(i))-FB) <(FB-FB') ;
 trig4(i,GR,FB) = deltaI(i,GR,FB) <(FB-FB') * (FB> (lowestGRi(i,GR)@(maxHold-LookAheadTime))) ;
