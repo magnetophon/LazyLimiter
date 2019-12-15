@@ -94,10 +94,8 @@ gainCompareGraphs =
 ,
   // (line(lowestGRi(5,GR),pow(2,6))@(maxHold-LookAheadTime))// fast fade
   // lowestGRi(5,GR)
-  (GR:(deltaGR(LookAheadTime)~_))
+  (GR:(deltaGR(LookAheadTime)~(_,_)))
 // ,(GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold))
-// , ((attackRamp(expo-tmp)/powI(expo-tmp)))
-// , ((attackRamp(expo-1)/powI(expo-1)))
 // , ((ramp(powI(1),lowestGRi(1,GR))/powI(1))@(maxHold-LookAheadTime))
 // ba.countup(powI(5),(GR-GR')!=0)
 // ba.countup(powI(5),(GR-GR')!=0)
@@ -126,30 +124,35 @@ del(x) = x-x';
 
 SandH(sample,x) = select2(sample,_,x)~_;
 
-deltaGR(maxI,FB,GR) =
+deltaGR(maxI,FB,FBraw,GR) =
   (
     // par(i, expo,
     select2(lowestGRi(i,GR)@(maxHold-LookAheadTime)>=FB ,
             (
-              ((lowestGRi(i,GR)@(maxHold-LookAheadTime):SandH(trig(i,GR,FB))-FB))
-                  // / ((powI(i)-ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime))+1)
-                / ((powI(i)-1- attackRamp(i,FB)):max(0)+1)
+              ((lowestGRi(i,GR)@(maxHold-LookAheadTime):SandH(trig(i,GR,FB,FBraw))-FB))
+                // / ((powI(i)-ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime))+1)
+                / ((powI(i)-1- attackRamp(i,FB,FBraw)):max(0)+1)
             ),
             (
               ((lowestGRi(i,GR)@(maxHold-LookAheadTime)-FB))
-                  // / ((powI(i)-ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime))+1)
-                  / ((powI(i)-ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime))+1)
+                // / ((powI(i)-ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime))+1)
+                / ((powI(i)-ramp(powI(i),lowestGRi(i,GR))@(maxHold-LookAheadTime))+1)
             )
     )
         // )
-    <: attackReleaseBlock(expo)
-    : ((minN(expo): holdFunction :smoothRel(smooR): smoothAttack(smooA) ) +FB)
-    :min(GR@maxHold)
+      // <: attackReleaseBlock(expo)
+      // : minN(expo)
+    : holdFunction
+      <:
+      (
+        ((AR : smoothRel(smooR): smoothAttack(smooA)  +FB) :min(GR@maxHold))
+      , (_+FBraw:min(GR@maxHold))
+      )
   )
-,((FB-FB') *pow(2,expo))
-,(deltaI(expo-1,GR,FB) *pow(2,expo))
-// ,(attackRamp(expo-1,FB) / powI(expo-1))
-// ,(trig(i,GR,FB)*0.5)
+// ,((FB-FB') *pow(2,expo))
+// ,(deltaI(expo-1,GR,FB) *pow(2,expo))
+// ,(attackRamp(expo-1,FB,FBraw) / powI(expo-1))
+ ,(trig(i,GR,FB,FBraw)*0.5)
 // ,(trig4(i,GR,FB) * 0.25)
 // ,(trig2(i,GR,FB)*0.25)
 // par(i, nrBands,
@@ -192,6 +195,10 @@ with {
   // * `trig`: the trigger signal (1: start at 0; 0: increase until `n`)
   // ramp(maxI,GR) = ((ba.countup(maxI,(GR-GR')!=0)/maxI):attackShaper)*maxI;
   // ramp(maxI,GR) =   ba.countup(maxI,(GR-GR')!=0);
+
+  AR(delta) =
+    select2((delta)<=0, 1+release,bottom)*delta;
+  
   attackRelease(i,attack,delta) =
     select2((delta)<=0,
             releaseFunc,
@@ -247,18 +254,20 @@ with {
 };
 
 // trig(i,GR,FB) = deltaI(i,GR,FB)<(FB-FB'):ba.impulsify ;//* (FB==GR@maxHold);
-// trig(i,GR,FB) = select3(0,trig1(i,GR,FB) , trig2(i,GR,FB), trig3(i,GR,FB) );
-// sel = hslider("sel", 0, 0, 2, 1);
-trig(i,GR,FB) = deltaI(i,GR,FB) <(FB-FB') ;
-trig2(i,GR,FB) = deltaI(i,GR,FB) <(FB-FB') * (FB> (lowestGRi(i,GR)@(maxHold-LookAheadTime))) ;
-trig3(i,GR,FB) = ((GR/powI(i))-FB) <(FB-FB') ;
+trig(i,GR,FB,FBraw) = select3(sel,trig1(i,GR,FB,FBraw) , trig2(i,GR,FB,FBraw), trig3(i,GR,FB,FBraw) );
+sel = hslider("sel", 0, 0, 2, 1);
+trig1(i,GR,FB,FBraw) = deltaI(i,GR,FB) <(FBraw-FBraw') ;
+trig2(i,GR,FB,FBraw) = deltaI(i,GR,FB) <(FBraw-FBraw') : ba.impulsify;
+trig3(i,GR,FB,FBraw) = deltaI(i,GR,FB) <(FB-FB') ;
+// trig2(i,GR,FB) = deltaI(i,GR,FB) <(FB-FB') * (FB> (lowestGRi(i,GR)@(maxHold-LookAheadTime))) ;
+// trig3(i,GR,FB) = ((GR/powI(i))-FB) <(FB-FB') ;
 trig4(i,GR,FB) = deltaI(i,GR,FB) <(FB-FB') * (FB> (lowestGRi(i,GR)@(maxHold-LookAheadTime))) ;
 // : ba.impulsify;
 //(FB==GR@maxHold);
 invert = _==0;
 mult = hslider("mult", 1, 0, 3, 0.01);
 ramp(maxI,GR) =   ba.countup(maxI,(GR>GR'))*mult;
-attackRamp(i,FB) =   ba.countup(powI(i),(trig(i,GR,FB)));
+attackRamp(i,FB,FBraw) =   ba.countup(powI(i),(trig(i,GR,FB,FBraw)));
 deltaI(i,GR,FB) = (lowestGRi(i,GR)@(maxHold-LookAheadTime)-FB)/powI(i);
 // attackRamp(i) =   ba.countup(powI(i),(lowestGRi(i,GR)-lowestGRi(i,GR)')!=0);
 // todo: ramp if lowestgr(10) !=lowestgr(5)
