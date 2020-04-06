@@ -9,9 +9,12 @@ process =
 
 totalLatency = nrBlocks * blockSize;
 // nrBlocks = 64;
-nrBlocks = 1;
-blockSize = 16;
-// blockSize = 128;
+// blockSize = 16;
+nrBlocks = 8;
+blockSize = 128;
+// nrBlocks = 1;
+// blockSize = 1024;
+// blockSize = 4;
 
 
 GR = vgroup("GR", no.lfnoise0(totalLatency *t * (no.lfnoise0(totalLatency/2):max(0.1) )):pow(3)*(1-noiseLVL) +(no.lfnoise(rate):pow(3) *noiseLVL):min(0)) ;//(no.noise:min(0)):ba.sAndH(t)
@@ -22,15 +25,15 @@ rate = hslider("rate", 20, 10, 20000, 10);
 smoothGR(GR) = FB~_ with {
   FB(prev) =
     // par(i, nrBlocks, crossf(i))
-    par(i, nrBlocks, crossf(i)):minN(nrBlocks)
+    select2(lowestGRblock(GR,totalLatency)>=prev 
+           ,par(i, nrBlocks, crossf(i)):minN(nrBlocks)
+           ,lowestGRblock(GR,totalLatency)
+    )//:min(GR@totalLatency)//bootstrap measure, TODO take out
   with {
   // crossf(i) = reset
   crossf(i) =
-    select2(lowestGRblock(GR,totalLatency)>=prev // TODO get out of par, only needed once
-           ,crossfade(prevH,newH ,ramp(size,reset))
+           crossfade(prevH,newH ,ramp(size,reset))
 // ,GR@totalLatency
-           ,lowestGRblock(GR,totalLatency)
-    ):min(GR@totalLatency)//bootstrap measure, TODO take out
 // ,GR@totalLatency)
 // ,ramp(size,reset)
 // ,prev
@@ -43,17 +46,20 @@ smoothGR(GR) = FB~_ with {
   // reset = new<new';
   // reset = resetFB~_ with {
   // resetFB(fb) =(newDownSpeed > oldDownSpeed(fb));
-  reset =(newDownSpeed > oldDownSpeed):ba.impulsify;
+  // reset =(newDownSpeed > oldDownSpeed):select2(checkbox("imp"),_,ba.impulsify);
+  // reset =(newDownSpeed > oldDownSpeed):ba.impulsify;
+  reset =(newDownSpeed > oldDownSpeed);
 
   newDownSpeed = (prev -new )/size;
-  // oldDownSpeed(reset) = (prev'-prev):ba.sAndH(reset);
+  // oldDownSpeed = (prev'-prev);
   oldDownSpeed = (prev'-prev);
-  lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatency);
+  // oldDownSpeed(reset) = (prev'-prev):ba.sAndH(reset);
   crossfade(a,b,x) = a*(1-x) + b*x;
   };
-  // ramp from 0 to 1 in n samples.
+  lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatency);
+  // ramp from 1/n to 1 in n samples.
   // when reset == 1, go back to 0.
-  ramp(n,reset) = select2(reset,_+(1/n):min(1),0)~_;
+  ramp(n,reset) = select2(reset,_+(1/n):min(1),1/n)~_;
 
   minN(n) = opWithNInputs(min,n);
 
