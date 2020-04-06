@@ -5,36 +5,53 @@ declare license "GPLv3";
 process =
   GR@(totalLatency*1)
  ,smoothGR(GR)
+// newVal,oldVal with {
+// newVal = hslider("val", 0, 0, 1, 0.1):ba.sAndH(reset);
+// oldVal = newVal':ba.sAndH(reset);
+// reset = button("reset"):ba.impulsify;
+// }
+// reset(attPhase)
 ;
+
+reset(attPhase) = resetFB(attPhase)~_:(!,_) ;
+resetFB(attPhase,oldDownSpeed) =(newDownSpeed > (oldDownSpeed))<:
+                                (
+                                  ((cross2:select2(_,_,newDownSpeed)*attPhase)~_)
+                                 ,_);
+cross2(a,b) = b,a;
+newDownSpeed = hslider("DS", 0, 0, 1, 0.1):ba.sAndH(button("samp"):ba.impulsify);
+attPhase = button("rel")*-1+1;
+
+xVal_target(reset)  = rwtable(3, 0.0,nextValIndex(reset),xVal,currentValIndex(reset));
+currentValIndex(reset) = reset :ba.toggle: xor(startPulse'');
+nextValIndex(reset) = currentValIndex(reset)*-1+1;
+startPulse = 1-1';
+
 
 totalLatency = nrBlocks * blockSize;
 // nrBlocks = 64;
 // blockSize = 16;
-nrBlocks = 8;
-blockSize = 128;
+// nrBlocks = 8;
+// blockSize = 128;
 // nrBlocks = 1;
 // blockSize = 1024;
-// blockSize = 4;
-
-
-GR = vgroup("GR", no.lfnoise0(totalLatency *t * (no.lfnoise0(totalLatency/2):max(0.1) )):pow(3)*(1-noiseLVL) +(no.lfnoise(rate):pow(3) *noiseLVL):min(0)) ;//(no.noise:min(0)):ba.sAndH(t)
-t= hslider("time", 0.1, 0, 1, 0.001);
-noiseLVL = hslider("noise", 0, 0, 1, 0.01);
-rate = hslider("rate", 20, 10, 20000, 10);
+nrBlocks = 4;
+blockSize = 4;
 
 smoothGR(GR) = FB~_ with {
   FB(prev) =
     // par(i, nrBlocks, crossf(i))
-    select2(lowestGRblock(GR,totalLatency)>=prev 
-           ,par(i, nrBlocks, crossf(i)):minN(nrBlocks)
-           ,lowestGRblock(GR,totalLatency)
-    )//:min(GR@totalLatency)//bootstrap measure, TODO take out
+    par(i, nrBlocks, crossf(i))
+// ,par(i, nrBlocks, crossf(i)):minN(nrBlocks)
   with {
   // crossf(i) = reset
   crossf(i) =
-           crossfade(prevH,newH ,ramp(size,reset))
+    select2(lowestGRblock(GR,totalLatency)>=prev
+           , crossfade(prevH,newH ,ramp(size,reset)) // TODO crossfade from current directin to new position
+           ,lowestGRblock(GR,totalLatency)
+    )//:min(GR@totalLatency)//bootstrap measure, TODO take out
+   ,reset
 // ,GR@totalLatency
-// ,GR@totalLatency)
 // ,ramp(size,reset)
 // ,prev
 // ,new
@@ -43,17 +60,21 @@ smoothGR(GR) = FB~_ with {
   newH = new:ba.sAndH(reset);
   size = (nrBlocks-i)*blockSize;
   prevH = prev:ba.sAndH(reset);
-  // reset = new<new';
-  // reset = resetFB~_ with {
-  // resetFB(fb) =(newDownSpeed > oldDownSpeed(fb));
-  // reset =(newDownSpeed > oldDownSpeed):select2(checkbox("imp"),_,ba.impulsify);
-  // reset =(newDownSpeed > oldDownSpeed):ba.impulsify;
-  reset =(newDownSpeed > oldDownSpeed);
+  reset = resetFB~_:(!,_) ;
+  resetFB(oldDownSpeed) =(newDownSpeed > (oldDownSpeed))<:
+                         (
+                           ((cross2:select2(_,oldDownSpeed,_))~_)
+                          ,_);
+  cross2(a,b) = b,a;
+  // reset = resetFB~_:(!,_) with {
+  // resetFB(fb) =(newDownSpeed > (fb))<:((newDownSpeed:ba.sAndH(_)),_);};
+  // reset =(newDownSpeed > oldDownSpeed);
 
   newDownSpeed = (prev -new )/size;
   // oldDownSpeed = (prev'-prev);
-  oldDownSpeed = (prev'-prev);
-  // oldDownSpeed(reset) = (prev'-prev):ba.sAndH(reset);
+  // oldDownSpeed(FBreset) = (prev'-prev),(FBreset:!);
+  // oldDownSpeed(FBreset) = newDownSpeed':ba.sAndH(FBreset)':ba.sAndH(FBreset);
+  // oldDownSpeed(FBreset) = newDownSpeed:ba.sAndH(FBreset:ba.impulsify);
   crossfade(a,b,x) = a*(1-x) + b*x;
   };
   lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatency);
@@ -76,5 +97,11 @@ smoothGR(GR) = FB~_ with {
       // nUp(N)   = int(floor((N/2)+0.5));
       // };
     };
-    };
+  };
 };
+
+
+GR = vgroup("GR", no.lfnoise0(totalLatency *t * (no.lfnoise0(totalLatency/2):max(0.1) )):pow(3)*(1-noiseLVL) +(no.lfnoise(rate):pow(3) *noiseLVL):min(0)) ;//(no.noise:min(0)):ba.sAndH(t)
+t= hslider("time", 0.1, 0, 1, 0.001);
+noiseLVL = hslider("noise", 0, 0, 1, 0.01);
+rate = hslider("rate", 20, 10, 20000, 10);
