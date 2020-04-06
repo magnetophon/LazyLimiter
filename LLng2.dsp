@@ -33,10 +33,10 @@ totalLatency = nrBlocks * blockSize;
 // blockSize = 16;
 // nrBlocks = 8;
 // blockSize = 128;
-// nrBlocks = 1;
-// blockSize = 1024;
-nrBlocks = 4;
-blockSize = 4;
+nrBlocks = 1;
+blockSize = 1024;
+// nrBlocks = 4;
+// blockSize = 4;
 
 smoothGR(GR) = FB~_ with {
   FB(prev) =
@@ -46,26 +46,34 @@ smoothGR(GR) = FB~_ with {
   with {
   // crossf(i) = reset
   crossf(i) =
-    select2(lowestGRblock(GR,totalLatency)>=prev
-           , crossfade(prevH,newH ,ramp(size,reset)) // TODO crossfade from current directin to new position
+    select2(attPhase
            ,lowestGRblock(GR,totalLatency)
+           , crossfade(prevH,newH ,ramp(size,reset(attPhase))) // TODO crossfade from current directin to new position
     )//:min(GR@totalLatency)//bootstrap measure, TODO take out
-   ,reset
+// ,reset(attPhase)
+   ,(prev!=GR@totalLatency)
+   ,attPhase
 // ,GR@totalLatency
 // ,ramp(size,reset)
 // ,prev
 // ,new
   with {
   new = lowestGRblock(GR,size)@(i*blockSize);
-  newH = new:ba.sAndH(reset);
+  newH = new:ba.sAndH(reset(attPhase));
   size = (nrBlocks-i)*blockSize;
-  prevH = prev:ba.sAndH(reset);
-  reset = resetFB~_:(!,_) ;
-  resetFB(oldDownSpeed) =(newDownSpeed > (oldDownSpeed))<:
-                         (
-                           ((cross2:select2(_,oldDownSpeed,_))~_)
-                          ,_);
+  prevH = prev:ba.sAndH(reset(attPhase));
+  reset(attPhase) = resetFB(attPhase)~_:(!,_) ;
+  resetFB(attPhase,oldDownSpeed) =(newDownSpeed > (oldDownSpeed))<:
+                                  (
+                                    ((cross2:select2(_,_,newDownSpeed)*(prev!=GR@totalLatency))~_)
+                                   ,_);
+  // reset = resetFB~_:(!,_) ;
+  // resetFB(oldDownSpeed) =(newDownSpeed > (oldDownSpeed))<:
+  // (
+  // ((cross2:select2(_,oldDownSpeed,_))~_)
+  // ,_);
   cross2(a,b) = b,a;
+  attPhase = lowestGRblock(GR,totalLatency)<prev;
   // reset = resetFB~_:(!,_) with {
   // resetFB(fb) =(newDownSpeed > (fb))<:((newDownSpeed:ba.sAndH(_)),_);};
   // reset =(newDownSpeed > oldDownSpeed);
