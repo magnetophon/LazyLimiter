@@ -20,7 +20,7 @@ GR@totalLatency
                                      ,_);
     cross2(a,b) = b,a;
     newDownSpeed = hslider("DS", 0, 0, 1, 0.1):ba.sAndH(button("samp"):ba.impulsify);
-    attPhase = button("rel")*-1+1;
+    // attPhase = button("rel")*-1+1;
 
     xVal_target(reset)  = rwtable(3, 0.0,nextValIndex(reset),xVal,currentValIndex(reset));
     currentValIndex(reset) = reset :ba.toggle: xor(startPulse'');
@@ -29,8 +29,8 @@ GR@totalLatency
 
 
     totalLatency = nrBlocks * blockSize;
-    nrBlocks = 1;
-    blockSize = 1024;
+    // nrBlocks = 1;
+    // blockSize = 1024;
     // nrBlocks = 2;
     // blockSize = 512;
     // nrBlocks = 4;
@@ -39,6 +39,10 @@ GR@totalLatency
     // blockSize = 128;
     // nrBlocks = 64;
     // blockSize = 16;
+    // nrBlocks = 1;
+    // blockSize = 256;
+    nrBlocks = 2;
+    blockSize = 128;
     // nrBlocks = 4;
     // blockSize = 4;
 
@@ -55,7 +59,7 @@ GR@totalLatency
                ,lowestGRblock(GR,totalLatency)
                , crossfade(prevH,newH ,ramp(size,reset(attPhase))) // TODO crossfade from current directin to new position
         ):min(GR@totalLatency)//bootstrap measure, TODO take out
-      , ((select2((newDownSpeed > (oldDownSpeed)),oldDownSpeed,newDownSpeed)*(prev!=GR@totalLatency)*(prev!=lowestGRblock(GR,totalLatency))*attPhase))
+      , (select2((newDownSpeed > (oldDownSpeed*oldIsValid)),oldDownSpeed*oldIsValid,newDownSpeed))
 // ,reset(attPhase)
 // ,(prev!=GR@(totalLatency+1))
 // ,(prev!=new)
@@ -70,30 +74,40 @@ GR@totalLatency
       prevH = prev:ba.sAndH(reset(attPhase));
       // reset(attPhase) = resetFB(attPhase)~_:(!,_) ;
       reset(attPhase) =
-        (newDownSpeed > (oldDownSpeed))
-// <:
-// (
-// ((cross2:select2(_,_,newDownSpeed)*(prev!=GR@totalLatency)*(prev!=lowestGRblock(GR,totalLatency))*attPhase)~_)
-// ,_)
-      ;
-      // reset = resetFB~_:(!,_) ;
-      // resetFB(oldDownSpeed) =(newDownSpeed > (oldDownSpeed))<:
-      // (
-      // ((cross2:select2(_,oldDownSpeed,_))~_)
-      // ,_);
-      cross2(a,b) = b,a;
-      attPhase = lowestGRblock(GR,totalLatency)<prev;
-      // reset = resetFB~_:(!,_) with {
-      // resetFB(fb) =(newDownSpeed > (fb))<:((newDownSpeed:ba.sAndH(_)),_);};
-      // reset =(newDownSpeed > oldDownSpeed);
-
-      newDownSpeed = (prev -new )/size;
-      // oldDownSpeed = (prev'-prev);
-      // oldDownSpeed(FBreset) = (prev'-prev),(FBreset:!);
-      // oldDownSpeed(FBreset) = newDownSpeed':ba.sAndH(FBreset)':ba.sAndH(FBreset);
-      // oldDownSpeed(FBreset) = newDownSpeed:ba.sAndH(FBreset:ba.impulsify);
-      crossfade(a,b,x) = a*(1-x) + b*x;
+        (newDownSpeed > (oldDownSpeed2*oldIsValid)) :ba.bypass1(checkbox("reset | (attPhase*-1+1)"),_| (attPhase*-1+1))// | (prev==GR@(totalLatency))
+      with {
+        oldDownSpeed2 = select2(checkbox("relOld"),oldDownSpeed, (prev'-prev));
       };
+      oldIsValid =
+        // lowestGRblock(GR,totalLatency)<prev
+        // &
+        select2(checkbox("oldIsValid"),(prev!=GR@(totalLatency)),1)
+//&(prev!=new)
+// & (prev!=prev')
+                ;
+
+                // <:
+                // (
+                // ((cross2:select2(_,_,newDownSpeed)*(prev!=GR@totalLatency)*(prev!=lowestGRblock(GR,totalLatency))*attPhase)~_)
+                // ,_)
+                // reset = resetFB~_:(!,_) ;
+                // resetFB(oldDownSpeed) =(newDownSpeed > (oldDownSpeed))<:
+                // (
+                // ((cross2:select2(_,oldDownSpeed,_))~_)
+                // ,_);
+                cross2(a,b) = b,a;
+                attPhase = lowestGRblock(GR,totalLatency)<prev;//(prev-oldDownSpeed);
+// reset = resetFB~_:(!,_) with {
+// resetFB(fb) =(newDownSpeed > (fb))<:((newDownSpeed:ba.sAndH(_)),_);};
+// reset =(newDownSpeed > oldDownSpeed);
+
+newDownSpeed = (prev -new )/size;
+// oldDownSpeed = (prev'-prev);
+// oldDownSpeed(FBreset) = (prev'-prev),(FBreset:!);
+// oldDownSpeed(FBreset) = newDownSpeed':ba.sAndH(FBreset)':ba.sAndH(FBreset);
+// oldDownSpeed(FBreset) = newDownSpeed:ba.sAndH(FBreset:ba.impulsify);
+crossfade(a,b,x) = a*(1-x) + b*x;
+        };
       lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatency);
       // ramp from 1/n to 1 in n samples.
       // when reset == 1, go back to 0.
