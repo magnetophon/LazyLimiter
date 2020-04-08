@@ -14,10 +14,10 @@ GR@totalLatency
     // blockSize = 512;
     // nrBlocks = 8;
     // blockSize = 128;
-    // nrBlocks = 1;
-    // blockSize = 256;
-    nrBlocks = 3;
-    blockSize = 128;
+    nrBlocks = 1;
+    blockSize = 512;
+    // nrBlocks = 3;
+    // blockSize = 128;
     // nrBlocks = 4;
     // blockSize = 4;
 
@@ -56,7 +56,7 @@ GR@totalLatency
       // when reset == 1, go back to 0.
       ramp(n,reset) = select2(reset,_+(1/n):min(1),1/n)~_;
 
-      crossfade(a,b,x) = in.interpolate_linear(x,a,b);  // faster then: a*(1-x) + b*x;
+      crossfade(a,b,x) = it.interpolate_linear(x,a,b);  // faster then: a*(1-x) + b*x;
 
       minN(n) = opWithNInputs(min,n);
       maxN(n) = opWithNInputs(max,n);
