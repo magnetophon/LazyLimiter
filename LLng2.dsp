@@ -30,22 +30,9 @@ blockSize = 128;
 // nrBlocks = 4;
 // blockSize = 4;
 
-smoothGR(GR) = FB~(_,_):(_,!,_,_) with {
+smoothGR(GR) = FB~(_,_):(_,!) with {
   FB(prev,oldDownSpeed) =
-    // par(i, nrBlocks, crossf(i))
     par(i, nrBlocks, crossf(i)):ro.interleave(2,nrBlocks):(minN(nrBlocks),maxN(nrBlocks))
-// ,currentDownSpeed*30
-// ,attPhase(prev)
-,ramp(size(1),reset(1))*128
-// ,speedIsZero
-// ,prevH(0)
-// ,prevH(1)
-// , newDownSpeed(0)*30
-// , newDownSpeed(1)*30
-,newH(1)
-// ,reset(1)
-// ,((prev-prev')*90)
-// ,(newDownSpeed(0) > currentDownSpeed)
   with {
   new(i) = lowestGRblock(GR,size(i))@(i*blockSize);
   newH(i) = new(i):ba.sAndH(reset(i)| (attPhase(prev)==0) );
@@ -66,7 +53,6 @@ smoothGR(GR) = FB~(_,_):(_,!,_,_) with {
   // speedIsZero = (prev==prev') ;
   speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatency)),(prev==prev'));
   size(i) = (nrBlocks-i)*blockSize;
-  // }; // ^^ needs i
   }; // ^^ needs prev and oldDownSpeed
   attPhase(prev) = lowestGRblock(GR,totalLatency)<prev;
   lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatency);
