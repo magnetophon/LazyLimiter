@@ -40,10 +40,8 @@ smoothGR(GR) = FB~(_,_):(_,!) with {
   reset(i) =
     (newDownSpeed(i) > currentDownSpeed);
   crossf(i) =
-    select2(attPhase(prev)
-           ,lowestGRblock(GR,totalLatency)
-           , crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i))*hslider("power %i", 1, 0, 2, 0.01)) // TODO crossfade from current direction to new position
-    ):min(GR@totalLatency)//TODO: make into brute force fade of 64 samples
+           crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i))*hslider("power %i", 1, 0, 2, 0.01)) // TODO crossfade from current direction to new position
+           :min(GR@totalLatency)//TODO: make into brute force fade of 64 samples
 // sample and hold oldDownSpeed:
   , (select2((newDownSpeed(i) > currentDownSpeed),currentDownSpeed ,newDownSpeed(i)));
   // with {
@@ -56,6 +54,8 @@ smoothGR(GR) = FB~(_,_):(_,!) with {
   }; // ^^ needs prev and oldDownSpeed
   attPhase(prev) = lowestGRblock(GR,totalLatency)<prev;
   lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatency);
+
+  // currentPosAndDir
 
   // ramp from 1/n to 1 in n samples.  (don't start at 0 cause when the ramp restarts, the crossfade should start right away)
   // when reset == 1, go back to 0.
