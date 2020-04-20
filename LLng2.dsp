@@ -3,13 +3,13 @@ declare author "Bart Brouns";
 declare license "GPLv3";
 
 process =
-GR@totalLatency
-,smoothGR(GR)
+  GR@totalLatencyLinear
+ ,smoothGRlinear(GR)
 // , (attRel~_)
 ;
 
 totalLatency = pow(2,expo);
-// totalLatency = nrBlocks * blockSize;
+totalLatencyLinear = nrBlocks * blockSize;
 // nrBlocks = 1;
 // blockSize = 1024;
 // nrBlocks = 2;
@@ -18,9 +18,9 @@ totalLatency = pow(2,expo);
 // blockSize = 128;
 // nrBlocks = 16;
 // blockSize = 64;
-// nrBlocks = 1;
-// blockSize = 512;
-// nrBlocks = 2;
+nrBlocks = 1;
+blockSize = 512;
+// nrBlocks = 4;
 // blockSize = 128;
 // nrBlocks = 1;
 // blockSize = 4;
@@ -28,7 +28,7 @@ totalLatency = pow(2,expo);
 // expo = 10;
 expo = 8;
 // TODO sAndH(reset) parameters
-smoothGR(GR) = FB~(_,_) :(_,!)
+smoothGRl(GR) = FB~(_,_) :(_,!)
 with {
   FB(prev,oldDownSpeed) =
     par(i, expo, fade(i)):ro.interleave(2,expo):(minN(expo),maxN(expo))
@@ -97,29 +97,32 @@ with {
   fade(i) =
     // crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
     crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
-    :min(GR@totalLatency)//TODO: make into brute force fade of 64 samples
+    :min(GR@totalLatencyLinear)//TODO: make into brute force fade of 64 samples
 // sample and hold oldDownSpeed:
   , (select2((newDownSpeed(i) > currentDownSpeed),currentDownSpeed ,newDownSpeed(i)));
-  rampShaper(i) = _:pow(power(i))*mult(i);
-  power(i) = LinArrayParametricMid(hslider("power bottom", 1, 0.001, 100, 0.001),hslider("power mid", 1, 0.001, 100, 0.001),hslider("band", (nrBlocks/2)-1, 0, nrBlocks, 1),hslider("power top", 1, 0.001, 100, 0.001),i,nrBlocks);
-  mult(i) = LinArrayParametricMid(hslider("mult bottom", 1, 0.001, 1 ,0.001),hslider("mult mid", 1, 0.001, 1 ,0.001),hslider("band", (nrBlocks/2)-1, 0, nrBlocks, 1),hslider("mult top", 1, 0.001, 1 ,0.001),i,nrBlocks);
+  rampShaper(i) = _:pow(power(i))*mult(i):max(smallestRamp(reset(i)));
+  power(i) = LinArrayParametricMid(hslider("power bottom", 1, 0.001, 100, 0.001),hslider("power mid", 1, 0.001, 100, 0.001),hslider("band", (nrBlocks/2)-1:max(0), 0, nrBlocks, 1),hslider("power top", 1, 0.001, 100, 0.001),i,nrBlocks);
+  mult(i) = LinArrayParametricMid(hslider("mult bottom", 1, 0.001, 1 ,0.001),hslider("mult mid", 1, 0.001, 1 ,0.001),hslider("band", (nrBlocks/2)-1:max(0), 0, nrBlocks, 1),hslider("mult top", 1, 0.001, 1 ,0.001),i,nrBlocks);
   currentPosAndDir(i) = prevH(i)-( ramp(size(i),reset(i)) * hslider("ramp", 0, 0, 1, 0.01) * (prevH(i)'-prevH(i)));
   // newDownSpeed(i) = (select2(checkbox("newdown"),prev,(prev'-currentDownSpeed)) -new(i) )/size(i);
   newDownSpeed(i) = (prev -new(i) )/size(i);
   currentDownSpeed = oldDownSpeed*(speedIsZero==0);
-  // speedIsZero = (prev==GR@(totalLatency)) ; // TODO: needs more checks, not attack
+  // speedIsZero = (prev==GR@(totalLatencyLinear)) ; // TODO: needs more checks, not attack
   // speedIsZero = (prev==prev') ;
-  speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatency)),(prev==prev'));
+  speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatencyLinear)),(prev==prev'));
   size(i) = (nrBlocks-i)*blockSize;
-  }; // ^^ needs prev and oldDownSpeed
-  attPhase(prev) = lowestGRblock(GR,totalLatency)<prev;
-  lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatency);
-
+}; // ^^ needs prev and oldDownSpeed
+  attPhase(prev) = lowestGRblock(GR,totalLatencyLinear)<prev;
+  lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatencyLinear);
 
   // ramp from 1/n to 1 in n samples.  (don't start at 0 cause when the ramp restarts, the crossfade should start right away)
   // when reset == 1, go back to 0.
   // ramp(n,reset) = select2(reset,_+(1/n):min(1),0)~_;
   ramp(n,reset) = select2(reset,_+(1/n):min(1),1/n)~_;
+
+  smallestRamp(reset)  = select2(reset,_+(small):min(1),small)~_ with {
+    small = pow(2,-23);
+};
 
   crossfade(a,b,x) = it.interpolate_linear(x,a,b);  // faster then: a*(1-x) + b*x;
 
