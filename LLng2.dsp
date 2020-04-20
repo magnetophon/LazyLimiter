@@ -25,8 +25,8 @@ totalLatency = pow(2,expo);
 // nrBlocks = 1;
 // blockSize = 4;
 // expo = 4;
-expo = 10;
-// expo = 8;
+// expo = 10;
+expo = 8;
 // TODO sAndH(reset) parameters
 smoothGR(GR) = FB~(_,_) :(_,!)
 with {
