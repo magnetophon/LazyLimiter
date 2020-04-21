@@ -5,6 +5,7 @@ declare license "GPLv3";
 process =
   GR@totalLatencyLinear
  ,smoothGRlinear(GR)
+// ,(smoothGRlinear(GR):max(-1):min(1))
 // , (attRel~_)
 ;
 
@@ -14,16 +15,16 @@ totalLatencyLinear = nrBlocks * blockSize;
 // blockSize = 1024;
 // nrBlocks = 2;
 // blockSize = 512;
-// nrBlocks = 8;
+// nrBlocks = 4;
 // blockSize = 128;
 // nrBlocks = 16;
 // blockSize = 64;
-nrBlocks = 1;
-blockSize = 512;
-// nrBlocks = 4;
-// blockSize = 128;
 // nrBlocks = 1;
-// blockSize = 4;
+// blockSize = 512;
+// nrBlocks = 1;
+// blockSize = 128;
+nrBlocks = 4;
+blockSize = 2;
 // expo = 4;
 // expo = 10;
 expo = 8;
@@ -87,7 +88,10 @@ smoothGRlinear(GR) = FB~(_,_)
                         :(_,!)
 with {
   FB(prev,oldDownSpeed) =
-    par(i, nrBlocks, fade(i)):ro.interleave(2,nrBlocks):(minN(nrBlocks),maxN(nrBlocks))
+    // select2(attPhase(prev),
+    (par(i, nrBlocks, fade(i)):ro.interleave(2,nrBlocks):(minN(nrBlocks),maxN(nrBlocks)))
+// , (lowestGRblock(GR,totalLatencyLinear),select2(checkbox("0"),oldDownSpeed,0))
+// )
   with {
   new(i) = lowestGRblock(GR,size(i))@(i*blockSize);
   newH(i) = new(i):ba.sAndH( reset(i)| (attPhase(prev)==0) );
@@ -95,15 +99,18 @@ with {
   reset(i) =
     (newDownSpeed(i) > currentDownSpeed);
   fade(i) =
-    // crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
-    crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
+    crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
+// crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
     :min(GR@totalLatencyLinear)//TODO: make into brute force fade of 64 samples
 // sample and hold oldDownSpeed:
   , (select2((newDownSpeed(i) > currentDownSpeed),currentDownSpeed ,newDownSpeed(i)));
   rampShaper(i) = _:pow(power(i))*mult(i):max(smallestRamp(reset(i)));
   power(i) = LinArrayParametricMid(hslider("power bottom", 1, 0.001, 100, 0.001),hslider("power mid", 1, 0.001, 100, 0.001),hslider("band", (nrBlocks/2)-1:max(0), 0, nrBlocks, 1),hslider("power top", 1, 0.001, 100, 0.001),i,nrBlocks);
   mult(i) = LinArrayParametricMid(hslider("mult bottom", 1, 0.001, 1 ,0.001),hslider("mult mid", 1, 0.001, 1 ,0.001),hslider("band", (nrBlocks/2)-1:max(0), 0, nrBlocks, 1),hslider("mult top", 1, 0.001, 1 ,0.001),i,nrBlocks);
-  currentPosAndDir(i) = prevH(i)-( ramp(size(i),reset(i)) * hslider("ramp", 0, 0, 1, 0.01) * (prevH(i)'-prevH(i)));
+  currentPosAndDir(i) = prevH(i)-( rampOne(i) * speed(i));
+  rampOne(i) = (select2(reset(i),_+1,1):min(size(i)))~_;
+  speed(i) = (prev-prev'):ba.sAndH( reset(i)| (attPhase(prev)==0) );
+  // speed(i) = (prev-prev'):ba.sAndH( reset(i) );
   // newDownSpeed(i) = (select2(checkbox("newdown"),prev,(prev'-currentDownSpeed)) -new(i) )/size(i);
   newDownSpeed(i) = (prev -new(i) )/size(i);
   currentDownSpeed = oldDownSpeed*(speedIsZero==0);
@@ -111,7 +118,7 @@ with {
   // speedIsZero = (prev==prev') ;
   speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatencyLinear)),(prev==prev'));
   size(i) = (nrBlocks-i)*blockSize;
-}; // ^^ needs prev and oldDownSpeed
+  }; // ^^ needs prev and oldDownSpeed
   attPhase(prev) = lowestGRblock(GR,totalLatencyLinear)<prev;
   lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatencyLinear);
 
