@@ -33,7 +33,7 @@ smoothGRl(GR) = FB~(_,_) :(_,!)
 with {
   FB(prev,oldDownSpeed) =
     par(i, expo, fade(i)):ro.interleave(2,expo)
-    :((minN(expo):attOrRelease(GR)),maxN(expo))
+    :((minN(expo):attOrRelease(GR):smoothie),maxN(expo))
 // ,( rampOne(0) * speed(0))
   with {
   new(i) = lowestGRblock(GR,size(i))@(totalLatency-size(i));
@@ -41,6 +41,7 @@ with {
   prevH(i) = prev:ba.sAndH( reset(i)| (attPhase(prev)==0) );
   reset(i) =
     (newDownSpeed(i) > currentDownSpeed) | (prev<=(lowestGRblock(GR,size(0))'));
+  // (newDownSpeed(i) > currentDownSpeed) ;
   fade(i) =
     crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // crossfade from current direction to new position
 // crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
@@ -54,18 +55,20 @@ with {
 // currentPosAndDir(i) = prevH(i)-( ramp(size(i),reset(i)) * hslider("ramp", 0, 0, 1, 0.01) * (prevH(i)'-prevH(i)));
 currentPosAndDir(i) = prevH(i)-( rampOne(i) * speed(i));
 rampOne(i) = (select2(reset(i),_+1,1):min(size(i)))~_;
-speed(i) = (prev-prev'):ba.sAndH( reset(i)| (attPhase(prev)==0) );
+// speed(i) = (prev-prev'):ba.sAndH( reset(i)| (attPhase(prev)==0) );
+speed(i) = (prev-prev'):ba.sAndH( select2( checkbox("speed(i)"),reset(i), reset(i)| (attPhase(prev)==0) ));
 // speed(i) = (prev-prev'):ba.sAndH( reset(i) );
 // newDownSpeed(i) = (select2(checkbox("newdown"),prev,(prev'-currentDownSpeed)) -new(i) )/size(i);
 newDownSpeed(i) = (prev -new(i) )/size(i);
 currentDownSpeed = oldDownSpeed*(speedIsZero==0);
 // speedIsZero = (prev==GR@(totalLatency)) ; // TODO: needs more checks, not attack
 // speedIsZero = (prev==prev') ;
-speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatency)),(prev==prev'));
+speedIsZero = select2(checkbox("speedIsZero"),(prev==GR@(totalLatency)),(prev==prev'));
 // speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatency+1)),(prev==prev'));
 size(i) = pow(2,(expo-i));
 // attOrRelease(GR,newGR) = select2(attPhase(prev) ,lowestGRblock(GR,size(0)),newGR);
 attOrRelease(GR,newGR) = select2(newGR<=lowestGRblock(GR,size(0)),newGR,lowestGRblock(GR,size(0)));
+smoothie(GR) = crossfade( lowestGRblock(GR,size(0)) , (2*prev)-prev', hslider("smoothie", 0, 0, 1, 0.01):pow(0.05) ) : min(GR);
   }; // ^^ needs prev and oldDownSpeed
   attPhase(prev) = lowestGRblock(GR,totalLatency)<prev;
   lowestGRblock(GR,size) = GR:slidingMinN(size,totalLatency);
