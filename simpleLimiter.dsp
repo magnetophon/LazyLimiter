@@ -1,5 +1,5 @@
 import("stdfaust.lib");
-
+import("slidingReduce.lib");
 
 process = GR@totalLatency,smoothGRl(GR);
 
@@ -25,21 +25,24 @@ noiseLVL = hslider("noise", 0, 0, 1, 0.01);
 rate = hslider("rate", 20, 10, 20000, 10);
 
 // expo = 3; // for block diagram
-// expo = 7; // 128 samples, 2.6 ms at 48k
-expo = 8; // 256 samples, 5.3 ms at 48k, the max lookahead of fabfilter pro-L is 5ms
+// expo = 6; // 64 samples, 1.3 ms at 48k
+expo = 7; // 128 samples, 2.6 ms at 48k
+// expo = 8; // 256 samples, 5.3 ms at 48k, the max lookahead of fabfilter pro-L is 5ms
 // TODO sAndH(reset) parameters
 smoothGRl(GR) = FB~(_,_) :(_,!)
 with {
   FB(prev,oldDownSpeed) =
-    par(i, expo, fade(i)):ro.interleave(2,expo):(minN(expo),maxN(expo))
+    par(i, expo, fade(i)):ro.interleave(2,expo)
+    :((minN(expo):attOrRelease(GR)),maxN(expo))
+// ,( rampOne(0) * speed(0))
   with {
   new(i) = lowestGRblock(GR,size(i))@(totalLatency-size(i));
   newH(i) = new(i):ba.sAndH( reset(i)| (attPhase(prev)==0) );
   prevH(i) = prev:ba.sAndH( reset(i)| (attPhase(prev)==0) );
   reset(i) =
-    (newDownSpeed(i) > currentDownSpeed);
+    (newDownSpeed(i) > currentDownSpeed) | (prev<=(lowestGRblock(GR,size(0))'));
   fade(i) =
-crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // crossfade from current direction to new position
+    crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // crossfade from current direction to new position
 // crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
 // crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i))) // TODO crossfade from current direction to new position
     :min(GR@totalLatency)//brute force fade of 64 samples not needed for binary tree attack ?
@@ -47,18 +50,25 @@ crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // 
   , (select2((newDownSpeed(i) > currentDownSpeed),currentDownSpeed ,newDownSpeed(i)));
   rampShaper(i) = _:pow(power(i))*mult(i):max(smallestRamp(reset(i)));
   power(i) = LinArrayParametricMid(hslider("power bottom", 1, 0.01, 10, 0.01),hslider("power mid", 1, 0.01, 10, 0.01),hslider("power band", (expo/2)-1, 0, expo, 1),hslider("power top", 0.5, 0.01, 10, 0.01),i,expo);
-  mult(i) = LinArrayParametricMid(hslider("mult bottom", 1, 0.001, 1 ,0.001),hslider("mult mid", 1, 0.001, 1 ,0.001),hslider("mult band", (expo/2)-1, 0, expo, 1),hslider("mult top", 1, 0.001, 1 ,0.001),i,expo);
-  currentPosAndDir(i) = prevH(i)-( ramp(size(i),reset(i)) * hslider("ramp", 0, 0, 1, 0.01) * (prevH(i)'-prevH(i)));
-  // newDownSpeed(i) = (select2(checkbox("newdown"),prev,(prev'-currentDownSpeed)) -new(i) )/size(i);
-  newDownSpeed(i) = (prev -new(i) )/size(i);
-  currentDownSpeed = oldDownSpeed*(speedIsZero==0);
-  // speedIsZero = (prev==GR@(totalLatency)) ; // TODO: needs more checks, not attack
-  // speedIsZero = (prev==prev') ;
-  speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatency)),(prev==prev'));
-  size(i) = pow(2,(expo-i));
+  mult(i) = 1;// LinArrayParametricMid(hslider("mult bottom", 1, 0.001, 1 ,0.001),hslider("mult mid", 1, 0.001, 1 ,0.001),hslider("mult band", (expo/2)-1, 0, expo, 1),hslider("mult top", 1, 0.001, 1 ,0.001),i,expo);
+// currentPosAndDir(i) = prevH(i)-( ramp(size(i),reset(i)) * hslider("ramp", 0, 0, 1, 0.01) * (prevH(i)'-prevH(i)));
+currentPosAndDir(i) = prevH(i)-( rampOne(i) * speed(i));
+rampOne(i) = (select2(reset(i),_+1,1):min(size(i)))~_;
+speed(i) = (prev-prev'):ba.sAndH( reset(i)| (attPhase(prev)==0) );
+// speed(i) = (prev-prev'):ba.sAndH( reset(i) );
+// newDownSpeed(i) = (select2(checkbox("newdown"),prev,(prev'-currentDownSpeed)) -new(i) )/size(i);
+newDownSpeed(i) = (prev -new(i) )/size(i);
+currentDownSpeed = oldDownSpeed*(speedIsZero==0);
+// speedIsZero = (prev==GR@(totalLatency)) ; // TODO: needs more checks, not attack
+// speedIsZero = (prev==prev') ;
+speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatency)),(prev==prev'));
+// speedIsZero = select2(checkbox("speed"),(prev==GR@(totalLatency+1)),(prev==prev'));
+size(i) = pow(2,(expo-i));
+// attOrRelease(GR,newGR) = select2(attPhase(prev) ,lowestGRblock(GR,size(0)),newGR);
+attOrRelease(GR,newGR) = select2(newGR<=lowestGRblock(GR,size(0)),newGR,lowestGRblock(GR,size(0)));
   }; // ^^ needs prev and oldDownSpeed
   attPhase(prev) = lowestGRblock(GR,totalLatency)<prev;
-  lowestGRblock(GR,size) = GR:ba.slidingMin(size,totalLatency);
+  lowestGRblock(GR,size) = GR:slidingMinN(size,totalLatency);
 
 
   // ramp from 1/n to 1 in n samples.  (don't start at 0 cause when the ramp restarts, the crossfade should start right away)
@@ -74,7 +84,7 @@ crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // 
 
   minN(n) = opWithNInputs(min,n);
   maxN(n) = opWithNInputs(max,n);
-
+  // opWithNInputs()
   opWithNInputs =
     case {
       (op,0) => 0:!;
