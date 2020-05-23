@@ -33,7 +33,9 @@ smoothGRl(GR) = FB~(_,_) :(_,!)
 with {
   FB(prev,oldDownSpeed) =
     par(i, expo, fade(i)):ro.interleave(2,expo)
-    :((minN(expo):attOrRelease(GR):smoothie),maxN(expo))
+    :((minN(expo)
+       :min(GR@totalLatency)//brute force fade of 64 samples not needed for binary tree attack ?
+       :attOrRelease(GR):smoothie(GR)),maxN(expo))
 // ,( rampOne(0) * speed(0))
   with {
   new(i) = lowestGRblock(GR,size(i))@(totalLatency-size(i));
@@ -46,7 +48,7 @@ with {
     crossfade(currentPosAndDir(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // crossfade from current direction to new position
 // crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i)):rampShaper(i)) // TODO crossfade from current direction to new position
 // crossfade(prevH(i),newH(i) ,ramp(size(i),reset(i))) // TODO crossfade from current direction to new position
-    :min(GR@totalLatency)//brute force fade of 64 samples not needed for binary tree attack ?
+// :min(GR@totalLatency)//brute force fade of 64 samples not needed for binary tree attack ?
 // sample and hold oldDownSpeed:
   , (select2((newDownSpeed(i) > currentDownSpeed),currentDownSpeed ,newDownSpeed(i)));
   rampShaper(i) = _:pow(power(i))*mult(i):max(smallestRamp(reset(i)));
@@ -68,7 +70,13 @@ speedIsZero = select2(checkbox("speedIsZero"),(prev==GR@(totalLatency)),(prev==p
 size(i) = pow(2,(expo-i));
 // attOrRelease(GR,newGR) = select2(attPhase(prev) ,lowestGRblock(GR,size(0)),newGR);
 attOrRelease(GR,newGR) = select2(newGR<=lowestGRblock(GR,size(0)),newGR,lowestGRblock(GR,size(0)));
-smoothie(GR) = crossfade( lowestGRblock(GR,size(0)) , (2*prev)-prev', hslider("smoothie", 0, 0, 1, 0.01):pow(0.05) ) : min(GR);
+// smoothie(GR) = crossfade( lowestGRblock(GR,size(0)) , (2*prev)-prev', hslider("smoothie", 0, 0, 1, 0.01):pow(0.5): (_<:select2(prev<prev',_,_*-1)) ) : min(GR);
+// smoothie(GR) = crossfade( lowestGRblock(GR,size(0)) , (2*prev)-prev', (select2(prev<prev',smooUp,smooDown)) ) : min(GR);
+smoothie(GR,newGR) = crossfade( select2(prev<prev',lowestGRblock(GR,size(0)),newGR) , (2*prev)-prev', (select2(prev<prev',smooUp,smooDown)) ) : min(newGR);
+// smoothie(GR,newGR) = (select2(prev<prev',crossfade( lowestGRblock(GR,size(0)) , (2*prev)-prev', smooDown ) : min(GR);
+
+smooUp = hslider("smooUp", 0, 0, 1, 0.01):pow(0.0005);
+smooDown = hslider("smooDown", 0, 0, 1, 0.01):pow(0.05);
   }; // ^^ needs prev and oldDownSpeed
   attPhase(prev) = lowestGRblock(GR,totalLatency)<prev;
   lowestGRblock(GR,size) = GR:slidingMinN(size,totalLatency);
