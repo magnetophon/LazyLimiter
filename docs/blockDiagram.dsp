@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Bart Brouns
+ *  Copyright (C) 2023 Bart Brouns
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; version 2 of the License.
@@ -12,12 +12,11 @@
 
 /*some building blocks where taken from or inspired by compressor-basics.dsp by Sampo Savolainen*/
 
-declare name      "LazyLimiterBlockDiagram";
-declare author    "Bart Brouns";
-declare version   "0.3.2";
-
-
-declare copyright "(C) 2014 Bart Brouns";
+declare name "LazyLimiter blockdiagram";
+declare version "0.3.3";
+declare author "Bart Brouns";
+declare license "GPL-2.0-only";
+declare copyright "© 2023 Bart Brouns <bart@magnetophon.nl>";
 
 import("stdfaust.lib");  //for ba.linear2db
 import("stdfaust.lib");  //for an.amp_follower

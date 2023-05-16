@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Bart Brouns
+ *  Copyright (C) 2023 Bart Brouns
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; version 2 of the License.
@@ -12,10 +12,10 @@
 
 /*some building blocks where taken from or inspired on compressor-basics.dsp by Sampo Savolainen*/
 
-declare name      "LookAheadLimiterMono";
+declare name      "HardWorkingLimiterMono";
 declare author    "Bart Brouns";
 declare version   "0.1";
-declare copyright "(C) 2014 Bart Brouns";
+declare copyright "© 2023 Bart Brouns <bart@magnetophon.nl>";
 
 import ("LookaheadLimiter.lib");
 
