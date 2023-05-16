@@ -1,6 +1,4 @@
 import("stdfaust.lib");
-import("slidingReduce.lib");
-
 process = GR@totalLatency,smoothGRl(GR);
 
 // maxAttack = 128;
@@ -79,7 +77,7 @@ smooUp = hslider("smooUp", 0, 0, 1, 0.01):pow(0.0005);
 smooDown = hslider("smooDown", 0, 0, 1, 0.01):pow(0.05);
   }; // ^^ needs prev and oldDownSpeed
   attPhase(prev) = lowestGRblock(GR,totalLatency)<prev;
-  lowestGRblock(GR,size) = GR:slidingMinN(size,totalLatency);
+  lowestGRblock(GR,size) = GR:slidingMin(size,totalLatency);
 
 
   // ramp from 1/n to 1 in n samples.  (don't start at 0 cause when the ramp restarts, the crossfade should start right away)

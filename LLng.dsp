@@ -68,7 +68,7 @@ lookahead_compression_gain_mono(strength,thresh,att,rel,knee,hold,lastdown,level
 // (
 // comp.gain_computer(1,thresh,knee,level)@(maxHold-LookAheadTime):deltaGR(LookAheadTime,lastdown)
 // ,
-// (comp.gain_computer(1,thresh,knee,level):ba.slidingMinN(hold,maxHold):max(lastdown))
+// (comp.gain_computer(1,thresh,knee,level):ba.slidingMin(hold,maxHold):max(lastdown))
 // ) : min;
 
 
@@ -95,7 +95,7 @@ gainCompareGraphs =
   // (line(lowestGRi(5,GR),pow(2,6))@(maxHold-LookAheadTime))// fast fade
   // lowestGRi(5,GR)
   (GR:(deltaGR(LookAheadTime)~(_,_)))
-// ,(GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold))
+// ,(GR:ba.slidingMin(hold,maxHold)@(maxHold-hold))
 // , ((ramp(powI(1),lowestGRi(1,GR))/powI(1))@(maxHold-LookAheadTime))
 // ba.countup(powI(5),(GR-GR')!=0)
 // ba.countup(powI(5),(GR-GR')!=0)
@@ -168,18 +168,18 @@ deltaGR(maxI,FB,FBraw,GR) =
 with {
   i=expo-1;
   linI(i) = (i+1)*pow(2,expo)/nrBands; // the lenght of each block
-  lowestGRlinI(i,GR) = GR:ba.slidingMinN(linI(i),linI(i))@delCompLin(i);
+  lowestGRlinI(i,GR) = GR:ba.slidingMin(linI(i),linI(i))@delCompLin(i);
 
   holdFunction(attackedGR) =
     attackedGR*(
-      (GR:ba.slidingMinN(hold,maxHold)@(maxHold-hold) > FB)
+      (GR:ba.slidingMin(hold,maxHold)@(maxHold-hold) > FB)
         +
         (attackedGR<0)
       :min(1)
     );
   // attackedGR;
-  // holdFunction = _;//@(maxHold-LookAheadTime);//*(GR:ba.slidingMinN(hold,maxHold) >= FB);
-  // (comp.gain_computer(1,thresh,knee,level):ba.slidingMinN(hold,maxHold):max(lastdown))
+  // holdFunction = _;//@(maxHold-LookAheadTime);//*(GR:ba.slidingMin(hold,maxHold) >= FB);
+  // (comp.gain_computer(1,thresh,knee,level):ba.slidingMin(hold,maxHold):max(lastdown))
   delCompLin(i) = pow(2,expo)-linI(i);
   attackReleaseBlock(size) =
     attackPlusInputs(size) :  par(i, size, attackRelease(i));
@@ -326,7 +326,7 @@ smootherFB(x,length,FB) =
 with {
   // delta = x-FB;
   delta = x-x';
-  minDelta = (delta):ba.slidingMinN(length,length);
+  minDelta = (delta):ba.slidingMin(length,length);
   deltaXfade = xFade(ramp*downSmooth,(x@length)-FB,minDelta)+FB;
   // deltaXfade = xFade(ramp*downSmooth,FB-FB',minDelta)+FB;
   // deltaXfade = (
@@ -346,10 +346,10 @@ with {
 };
 
 detaGR(GR) = GR-GR';
-minDeltaGR(GR) = deltaGR(GR):ba.slidingMinN(length,length);
+minDeltaGR(GR) = deltaGR(GR):ba.slidingMin(length,length);
 
 // similar thing for the attack-corner:
-GRlong = GR:ba.slidingMinN(length,length); // to almost reach the trought earlier
+GRlong = GR:ba.slidingMin(length,length); // to almost reach the trought earlier
 // if (somewhere in the next "length" samples, we are going up quicker then we are now):
 // then (fade up to that speed)
 
@@ -357,7 +357,7 @@ linPart = hslider("linPart", 5, 1, 8, 1);
 
 powI(i) = pow(2,i+1);
 delComp(i) = pow(2,expo)-powI(i);
-lowestGRi(i,GR) = GR:ba.slidingMinN(powI(i),powI(i))@delComp(i);
+lowestGRi(i,GR) = GR:ba.slidingMin(powI(i),powI(i))@delComp(i);
 
 // LookAheadTime = 127;
 // LookAheadTime = 4096;
@@ -374,7 +374,7 @@ with {
   };
 };
 
-lowestGR(GR) = GR:ba.slidingMinN(LookAheadTime,LookAheadTime);
+lowestGR(GR) = GR:ba.slidingMin(LookAheadTime,LookAheadTime);
 
 
 GR = no.lfnoise0(LookAheadTime *t * (no.lfnoise0(LookAheadTime/2):max(0.1) )):pow(3)*(1-noiseLVL) +(no.lfnoise(rate):pow(3) *noiseLVL):min(0);//(no.noise:min(0)):ba.sAndH(t)
